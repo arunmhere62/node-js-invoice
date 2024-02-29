@@ -3,8 +3,8 @@ import { Client } from "../../models/client.js";
 
 const createClient = async (req, res) => {
     try {
-        const { primaryContact, type, companyName, email, PhoneNumber } = req.body;
-        const newData = new Client({ primaryContact, type, companyName, email, PhoneNumber });
+        const { primaryContact, type, companyName, email, phoneNumber } = req.body;
+        const newData = new Client({ primaryContact, type, companyName, email, phoneNumber });
         const saveData = await newData.save();
         res.status(201).json(saveData);
     } catch (error) {

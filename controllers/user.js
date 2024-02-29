@@ -28,7 +28,6 @@ const userLogin = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-
         // If user exists, generate token
         const token = jwt.sign({ email: user.email }, secretKey, { expiresIn: "24hr" });
         res.status(200).json({ token });
