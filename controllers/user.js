@@ -6,8 +6,8 @@ import crypto from 'crypto';
 // -----------------------------to insert the loggedIn users-----------------------------------
 const userRegistration = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
-        const newData = new UserLogin({ name, email, password });
+        const { username, email, password } = req.body;
+        const newData = new UserLogin({ username, email, password });
         const saveData = await newData.save();
         res.status(201).json(saveData);
     } catch (error) {
@@ -16,19 +16,25 @@ const userRegistration = async (req, res) => {
     }
 };
 
-const secretKey = 'yourSecretKey'; // Provide the same secret key for signing and verification
+const secretKey = 'yourSecretKey';
+
 const userLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = UserLogin.findOne({ email, password });
+        // Await the findOne method to get the user
+        const user = await UserLogin.findOne({ email, password });
+
+        // Check if user exists
         if (!user) {
-            return res.status(404).json({ message: "user not found" });
+            return res.status(404).json({ message: "User not found" });
         }
-        const token = jwt.sign({ email: user.email }, secretKey, { expiresIn: "1hr" });
+
+        // If user exists, generate token
+        const token = jwt.sign({ email: user.email }, secretKey, { expiresIn: "24hr" });
         res.status(200).json({ token });
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: "internal server error" });
+        res.status(500).json({ message: "Internal server error" });
     }
 }
 
