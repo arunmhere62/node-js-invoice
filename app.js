@@ -2,6 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 import userRouter from './routes/users.js';
 import productRouter from "./routes/product.js";
+import clientRouter from "./routes/client.js";
+
 const app = express();
 const PORT = 4000;
 // Middleware to parse JSON bodies
@@ -9,6 +11,7 @@ app.use(express.json());
 
 app.use("/user", userRouter)
 app.use("/product", productRouter)
+app.use("/client", clientRouter);
 
 
 mongoose
