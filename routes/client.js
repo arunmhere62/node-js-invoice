@@ -2,7 +2,6 @@ import express from 'express';
 import { createClient, deleteClientById, getAllClients, updateClient } from '../controllers/Client/clients.js';
 import verifyToken from '../middleware/authorization.js';
 
-
 const router = express.Router();
 
 router.post("/createClient", verifyToken, createClient);
