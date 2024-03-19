@@ -2,7 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import userRouter from './routes/users.js';
 import productRouter from "./routes/product.js";
-import clientRouter from "./routes/client.js";
+import clientRouter from "./routes/customer.js";
 import serviceRouter from "./routes/services.js";
 import cors from "cors";
 const app = express();
@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cors());
 app.use("/user", userRouter)
 app.use("/product", productRouter)
-app.use("/client", clientRouter);
+app.use("/customer", clientRouter);
 app.use("/service", serviceRouter);
 
 
