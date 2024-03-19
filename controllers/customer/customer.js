@@ -18,7 +18,7 @@ const customerCreate = async (req, res) => {
 
         // Create and save the new customer data
         const saveData = await Customer.create({
-            primaryContact, type, companyName, email, phoneNumber, paymentTerms, country,
+            primaryContact, type, companyName, phoneNumber, paymentTerms, country,
             address, city, state, customerEmail, zipCode, contactName, contactEmail, contactPhone
         });
 
