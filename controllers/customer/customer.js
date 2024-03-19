@@ -4,12 +4,12 @@ import { Customer } from "../../models/customer.js";
 const customerCreate = async (req, res) => {
     try {
         const {
-            primaryContact, type, customerEmail, companyName, email, phoneNumber, paymentTerms, country,
+            primaryContact, type, customerEmail, companyName, phoneNumber, paymentTerms, country,
             address, city, state, zipCode, contactName, contactEmail, contactPhone
         } = req.body;
 
         // Check if any required field is absent
-        const requiredFields = ["primaryContact", "type", "customerEmail", "companyName", "email", "phoneNumber", "paymentTerms", "country", "address", "city", "state", "zipCode", "contactName", "contactEmail", "contactPhone"];
+        const requiredFields = ["primaryContact", "type", "customerEmail", "companyName", "phoneNumber", "paymentTerms", "country", "address", "city", "state", "zipCode", "contactName", "contactEmail", "contactPhone"];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({ message: `${field} is required` });
