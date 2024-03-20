@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
 
 const ServiceSchema = mongoose.Schema({
-    serviceCode: {
+    serviceAccountingCode: {
         type: String,
         required: true,
     },
-    description: {
+    serviceDescription: {
         type: String,
         required: true,
     },
-    amount: {
+    serviceAmount: {
         type: Number,
         required: true,
     }
