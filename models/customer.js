@@ -5,7 +5,7 @@ const CustomerSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    type: {
+    customerType: {
         type: String,
         required: true,
     },
