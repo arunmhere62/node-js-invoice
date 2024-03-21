@@ -4,6 +4,7 @@ import userRouter from './routes/users.js';
 import productRouter from "./routes/product.js";
 import clientRouter from "./routes/customer.js";
 import serviceRouter from "./routes/services.js";
+import invoiceRouter from "./routes/invoice.js";
 import cors from "cors";
 const app = express();
 const PORT = 4000;
@@ -14,6 +15,7 @@ app.use("/user", userRouter)
 app.use("/product", productRouter)
 app.use("/customer", clientRouter);
 app.use("/service", serviceRouter);
+app.use("/invoice", invoiceRouter);
 
 
 mongoose
