@@ -9,7 +9,7 @@ const BaseInvoiceSchema = mongoose.Schema({
         require: true,
         type: String
     },
-    customerName: {
+    companyName: {
         require: true,
         type: String
     },
