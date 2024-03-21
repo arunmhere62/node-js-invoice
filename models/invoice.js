@@ -1,32 +1,78 @@
 import mongoose from "mongoose";
 
 const BaseInvoiceSchema = mongoose.Schema({
-    primaryContact: String,
-    type: String,
-    companyName: String,
-    customerEmail: String,
-    phoneNumber: Number,
-    paymentTerms: String,
-    country: String,
-    address: String,
-    city: String,
-    state: String,
-    pinCode: String,
-    contactName: String,
-    contactEmail: String,
-    contactPhone: Number
+    invoiceType: {
+        require: true,
+        type: String
+    },
+    invoiceNumber: {
+        require: true,
+        type: String
+    },
+    customerName: {
+        require: true,
+        type: String
+    },
+    gstType: {
+        require: true,
+        type: String
+    },
+    gstPercentage: {
+        require: true,
+        type: String
+    },
+    invoiceDate: {
+        require: true,
+        type: String
+    },
+
+    gstInNumber: {
+        require: true,
+        type: String
+    },
+    paymentTerms: {
+        require: true,
+        type: String
+    },
+    dueDate: {
+        require: true,
+        type: String
+    },
+    invoiceStatus: {
+        require: true,
+        type: String
+    },
+    servicesList: [
+        {
+            serviceAccountingCode: {
+                require: true,
+                type: String
+            },
+            qty: {
+                require: true,
+                type: Number
+            },
+            price: {
+                require: true,
+                type: Number
+            },
+            serviceAmount: {
+                require: true,
+                type: Number
+            }
+        },
+    ]
 }, { discriminatorKey: 'type' });
 
 const RegularInvoiceSchema = new mongoose.Schema({
-    regularInvoice: String,
-    regularInvoiceNumber: String,
-    qty: Number,
+    retainerFees: {
+        require: true,
+        type: Number
+    },
 });
 
 const OneTimeInvoiceSchema = new mongoose.Schema({
-    oneTime: String,
-    oneTimeInvoiceNumber: String,
-    price: Number,
+    //    
 });
 
 const BaseInvoice = mongoose.model("invoice", BaseInvoiceSchema);

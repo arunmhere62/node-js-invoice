@@ -7,7 +7,7 @@ const invoiceCreate = async (req, res) => {
         console.log('Received invoice data:', invoiceData);
 
         let InvoiceModel;
-        switch (invoiceData.type) {
+        switch (invoiceData.invoiceType) {
             case 'RegularInvoice':
                 InvoiceModel = RegularInvoice;
                 break;
@@ -17,11 +17,9 @@ const invoiceCreate = async (req, res) => {
             default:
                 InvoiceModel = BaseInvoice;
         }
-        console.log('Selected InvoiceModel:', InvoiceModel.modelName);
-
+        // console.log('Selected InvoiceModel:', InvoiceModel.modelName);
         const newInvoice = await InvoiceModel.create(invoiceData);
-        console.log('New invoice created:', newInvoice);
-
+        // console.log('New invoice created:', newInvoice);
         res.status(201).json(newInvoice);
     } catch (error) {
         console.error('Error creating invoice:', error);
