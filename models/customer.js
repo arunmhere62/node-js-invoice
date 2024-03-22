@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const CustomerSchema = mongoose.Schema({
-    primaryContact: {
+    customerName: {
         type: String,
         required: true,
     },
