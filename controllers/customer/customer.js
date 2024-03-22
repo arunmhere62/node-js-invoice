@@ -57,7 +57,7 @@ const customerUpdate = async (req, res) => {
 const customerDeleteById = async (req, res) => {
     try {
         const customerId = req.params.id;
-        if (!mongoose.customerTypes.ObjectId.isValid(customerId)) {
+        if (!mongoose.Types.ObjectId.isValid(customerId)) {
             return res.status(400).json({ message: "Invalid Customer ID" });
         }
         const deletedCustomer = await Customer.findByIdAndDelete(customerId);
