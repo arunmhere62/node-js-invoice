@@ -1,14 +1,13 @@
 import mongoose from "mongoose";
 import { Customer } from "../../models/customer.js";
-
 const customerCreate = async (req, res) => {
     try {
         const {
-            customerName, type, customerEmail, companyName, phoneNumber, paymentTerms, country,
+            customerName, customerType, customerEmail, companyName, phoneNumber, paymentTerms, country,
             address, city, state, pinCode, contactName, contactEmail, contactPhone
         } = req.body;
         // Check if any required field is absent
-        const requiredFields = ["customerName", "type", "customerEmail", "companyName", "phoneNumber", "paymentTerms", "country", "address", "city", "state", "pinCode", "contactName", "contactEmail", "contactPhone"];
+        const requiredFields = ["customerName", "customerType", "customerEmail", "companyName", "phoneNumber", "paymentTerms", "country", "address", "city", "state", "pinCode", "contactName", "contactEmail", "contactPhone"];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({ message: `${field} is required` });
@@ -16,7 +15,7 @@ const customerCreate = async (req, res) => {
         }
         // Create and save the new customer data
         const saveData = await Customer.create({
-            customerName, type, companyName, phoneNumber, paymentTerms, country,
+            customerName, customerType, companyName, phoneNumber, paymentTerms, country,
             address, city, state, customerEmail, pinCode, contactName, contactEmail, contactPhone
         });
         res.status(201).json(saveData);
@@ -58,7 +57,7 @@ const customerUpdate = async (req, res) => {
 const customerDeleteById = async (req, res) => {
     try {
         const customerId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(customerId)) {
+        if (!mongoose.customerTypes.ObjectId.isValid(customerId)) {
             return res.status(400).json({ message: "Invalid Customer ID" });
         }
         const deletedCustomer = await Customer.findByIdAndDelete(customerId);
