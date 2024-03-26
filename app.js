@@ -19,7 +19,7 @@ app.use("/invoice", invoiceRouter);
 
 
 mongoose
-  .connect("mongodb+srv://arun1234:arun1234@cluster0.ykqmtot.mongodb.net/?retryWrites=true&w=majority")
+  .connect("mongodb+srv://arunmhere62:arunmhere62@cluster0.mc7p0lk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
