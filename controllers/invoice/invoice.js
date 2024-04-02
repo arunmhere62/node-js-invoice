@@ -1,15 +1,14 @@
 import mongoose from "mongoose";
-import { BaseInvoice, OneTimeInvoice, RegularInvoice } from "../../models/invoice.js";
+import { BaseInvoice, OneTimeInvoice, RetainerInvoice } from "../../models/invoice.js";
 
 const invoiceCreate = async (req, res) => {
     try {
         const invoiceData = req.body;
-        console.log('Received invoice data:', invoiceData);
 
         let InvoiceModel;
         switch (invoiceData.invoiceType) {
-            case 'RegularInvoice':
-                InvoiceModel = RegularInvoice;
+            case 'RetainerInvoice':
+                InvoiceModel = RetainerInvoice;
                 break;
             case 'OneTimeInvoice':
                 InvoiceModel = OneTimeInvoice;
@@ -26,7 +25,6 @@ const invoiceCreate = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
-
 
 const invoiceGetAll = async (req, res) => {
     try {

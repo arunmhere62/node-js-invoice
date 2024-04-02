@@ -1,0 +1,29 @@
+ {
+    invoiceType: 'Onetime',
+    invoiceNumber: '435345fdf',
+    customerName: 'Arya stark',
+    gstType: 'Local',
+    gstPercentage: '0.18',
+    gstInNumber: '6',
+    paymentTerms: 'Net 30',
+    invoiceDate: '29-03-2024',
+    dueDate: '28-04-2024',
+    invoiceStatus: 'Pending',
+    service: [ 'ECF7589', 'HSG3421' ],
+    servicesList: [
+      {
+        id: 'ECF7589',
+        serviceAccountingCode: 'ECF7589',
+        serviceAmount: 15000,
+        qty: 1,
+        totalAmount: 15000
+      },
+      {
+        id: 'HSG3421',
+        serviceAccountingCode: 'HSG3421',
+        serviceAmount: 15000,
+        qty: 1,
+        totalAmount: 15000
+      }
+    ]
+  }

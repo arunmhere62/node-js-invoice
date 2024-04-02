@@ -18,17 +18,22 @@ const userRegistration = async (req, res) => {
 
 const secretKey = 'yourSecretKey';
 
+
 const userLogin = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        // Await the findOne method to get the user
-        const user = await UserLogin.findOne({ email, password });
-
-        // Check if user exists
+        const { username, email, password } = req.body;
+        let user;
+        if (email) {
+            user = await UserLogin.findOne({ email, password })
+        }
+        else if (username) {
+            user = await UserLogin.findOne({ username, password })
+        } else {
+            return res.status(400).json({ message: "please provide either username or password" })
+        }
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-        // If user exists, generate token
         const token = jwt.sign({ email: user.email }, secretKey, { expiresIn: "24hr" });
         res.status(200).json({ token });
     } catch (error) {
@@ -36,6 +41,7 @@ const userLogin = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
 
 
 // -----------------------------to update all users-----------------------------------

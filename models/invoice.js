@@ -21,16 +21,15 @@ const BaseInvoiceSchema = mongoose.Schema({
         require: true,
         type: String
     },
-    invoiceDate: {
-        require: true,
-        type: String
-    },
-
     gstInNumber: {
         require: true,
         type: String
     },
     paymentTerms: {
+        require: true,
+        type: String
+    },
+    invoiceDate: {
         require: true,
         type: String
     },
@@ -42,6 +41,7 @@ const BaseInvoiceSchema = mongoose.Schema({
         require: true,
         type: String
     },
+    service: [],
     servicesList: [
         {
             serviceAccountingCode: {
@@ -64,7 +64,7 @@ const BaseInvoiceSchema = mongoose.Schema({
     ]
 }, { discriminatorKey: 'type' });
 
-const RegularInvoiceSchema = new mongoose.Schema({
+const RetainerInvoiceSchema = new mongoose.Schema({
     retainerFees: {
         require: true,
         type: Number
@@ -76,7 +76,10 @@ const OneTimeInvoiceSchema = new mongoose.Schema({
 });
 
 const BaseInvoice = mongoose.model("invoice", BaseInvoiceSchema);
-const RegularInvoice = BaseInvoice.discriminator('RegularInvoice', RegularInvoiceSchema);
+const RetainerInvoice = BaseInvoice.discriminator('RetainerInvoice', RetainerInvoiceSchema);
 const OneTimeInvoice = BaseInvoice.discriminator('OneTimeInvoice', OneTimeInvoiceSchema);
 
-export { BaseInvoice, RegularInvoice, OneTimeInvoice };
+export { BaseInvoice, RetainerInvoice, OneTimeInvoice };
+
+
+
