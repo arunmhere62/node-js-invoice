@@ -3,11 +3,11 @@ import { Customer } from "../../models/customer.js";
 const customerCreate = async (req, res) => {
     try {
         const {
-            customerName, customerType, customerEmail, companyName, phoneNumber, paymentTerms, country,
+            customerName, customerType, customerEmail, companyName, customerPhone, paymentTerms, country,
             address, city, state, pinCode, contactName, contactEmail, contactPhone
         } = req.body;
         // Check if any required field is absent
-        const requiredFields = ["customerName", "customerType", "customerEmail", "companyName", "phoneNumber", "paymentTerms", "country", "address", "city", "state", "pinCode", "contactName", "contactEmail", "contactPhone"];
+        const requiredFields = ["customerName", "customerType", "customerEmail", "companyName", "customerPhone", "paymentTerms", "country", "address", "city", "state", "pinCode", "contactName", "contactEmail", "contactPhone"];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({ message: `${field} is required` });
@@ -15,7 +15,7 @@ const customerCreate = async (req, res) => {
         }
         // Create and save the new customer data
         const saveData = await Customer.create({
-            customerName, customerType, companyName, phoneNumber, paymentTerms, country,
+            customerName, customerType, companyName, customerPhone, paymentTerms, country,
             address, city, state, customerEmail, pinCode, contactName, contactEmail, contactPhone
         });
         res.status(201).json(saveData);
