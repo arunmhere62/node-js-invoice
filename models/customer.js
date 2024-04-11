@@ -1,5 +1,20 @@
 import mongoose from "mongoose";
 
+const ContactPersonSchema = mongoose.Schema({
+    contactName: {
+        type: String,
+        required: true,
+    },
+    contactEmail: {
+        type: String,
+        required: true,
+    },
+    contactPhone: {
+        type: String, // Assuming phone number is stored as a string
+        required: true,
+    },
+});
+
 const CustomerSchema = mongoose.Schema({
     customerName: {
         type: String,
@@ -45,18 +60,7 @@ const CustomerSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    contactName: {
-        type: String,
-        required: true,
-    },
-    contactEmail: {
-        type: String,
-        required: true,
-    },
-    contactPhone: {
-        type: Number,
-        required: true,
-    }
+    contactPersons: [ContactPersonSchema],
 });
 
 const Customer = mongoose.model("customer", CustomerSchema);

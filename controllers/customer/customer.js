@@ -1,41 +1,53 @@
 import mongoose from "mongoose";
 import { Customer } from "../../models/customer.js";
+
 const customerCreate = async (req, res) => {
     try {
-        const {
-            customerName, customerType, customerEmail, companyName, customerPhone, paymentTerms, country,
-            address, city, state, pinCode, contactName, contactEmail, contactPhone
-        } = req.body;
-        // Check if any required field is absent
-        const requiredFields = ["customerName", "customerType", "customerEmail", "companyName", "customerPhone", "paymentTerms", "country", "address", "city", "state", "pinCode", "contactName", "contactEmail", "contactPhone"];
-        for (const field of requiredFields) {
-            if (!req.body[field]) {
-                return res.status(400).json({ message: `${field} is required` });
-            }
-        }
-        // Create and save the new customer data
-        const saveData = await Customer.create({
-            customerName, customerType, companyName, customerPhone, paymentTerms, country,
-            address, city, state, customerEmail, pinCode, contactName, contactEmail, contactPhone
+        const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
+
+        const newCustomer = new Customer({
+            customerName,
+            customerType,
+            companyName,
+            customerEmail,
+            customerPhone,
+            paymentTerms,
+            country,
+            address,
+            city,
+            state,
+            pinCode,
+            contactPersons,
         });
-        res.status(201).json(saveData);
+        const savedCustomer = await newCustomer.save();
+        res.status(201).json(savedCustomer);
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "Internal server error" });
+        console.error('Error creating customer:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
-
-
 const customerGetAll = async (req, res) => {
     try {
         const clients = await Customer.find();
-        res.status(200).json(clients);
+        // Map through each document to transform _id to id
+        const transformedClients = clients.map(client => {
+            const { _id, ...rest } = client.toObject(); // Destructure _id
+            return {
+                ...rest, // Spread the rest of the properties
+                id: _id, // Rename _id to id
+                // Transform contactPersons array
+                contactPersons: client.contactPersons.map(contactPerson => ({
+                    ...contactPerson.toObject(), // Spread the contactPerson properties
+                    id: contactPerson._id // Rename _id to id
+                }))
+            };
+        });
+        res.status(200).json(transformedClients);
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
-
 
 const customerUpdate = async (req, res) => {
     try {
