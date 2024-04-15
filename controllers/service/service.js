@@ -3,8 +3,8 @@ import { Service } from "../../models/services.js";
 
 const serviceCreate = async (req, res) => {
     try {
-        const { serviceCode, description, amount } = req.body;
-        const newService = new Service({ serviceCode, description, amount });
+        const { serviceAccountingCode, serviceDescription, serviceAmount } = req.body;
+        const newService = new Service({ serviceAccountingCode, serviceDescription, serviceAmount });
         const saveService = await newService.save();
         res.status(201).json(saveService);
     } catch (error) {

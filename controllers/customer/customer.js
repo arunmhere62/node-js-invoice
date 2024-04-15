@@ -26,19 +26,32 @@ const customerCreate = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+const customerGetParticular = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const customer = await Customer.findById(id);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        res.json(customer);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "internal server error" })
+    }
+}
+
 const customerGetAll = async (req, res) => {
     try {
         const clients = await Customer.find();
-        // Map through each document to transform _id to id
         const transformedClients = clients.map(client => {
-            const { _id, ...rest } = client.toObject(); // Destructure _id
+            const { _id, ...rest } = client.toObject();
             return {
-                ...rest, // Spread the rest of the properties
-                id: _id, // Rename _id to id
-                // Transform contactPersons array
+                ...rest,
+                id: _id,
                 contactPersons: client.contactPersons.map(contactPerson => ({
-                    ...contactPerson.toObject(), // Spread the contactPerson properties
-                    id: contactPerson._id // Rename _id to id
+                    ...contactPerson.toObject(),
+                    id: contactPerson._id
                 }))
             };
         });
@@ -83,4 +96,4 @@ const customerDeleteById = async (req, res) => {
     }
 };
 
-export { customerCreate, customerGetAll, customerDeleteById, customerUpdate }
+export { customerCreate, customerGetAll, customerDeleteById, customerUpdate, customerGetParticular }
