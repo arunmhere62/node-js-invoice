@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post('/list', servicesList);
 router.post('/create', serviceCreate);
-router.post('/create', serviceCreate);
+router.post('/update/:id', serviceUpdate);
 router.post('/get/:id', getServiceById);
 router.post('/delete/:id', serviceDelete);
 
