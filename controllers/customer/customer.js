@@ -28,6 +28,7 @@ const customerCreate = async (req, res) => {
 };
 
 const customerGetParticular = async (req, res) => {
+    console.log("customer get particular");
     try {
         const { id } = req.params;
         const customer = await Customer.findById(id);

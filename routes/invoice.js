@@ -4,8 +4,8 @@ import { invoiceCreate, invoiceDelete, invoiceGetAll } from "../controllers/invo
 
 const router = express.Router();
 
-router.post("/create", verifyToken, invoiceCreate)
-router.post("/list", verifyToken, invoiceGetAll)
-router.post("/delete/:id", verifyToken, invoiceDelete)
+router.post("/create", invoiceCreate)
+router.post("/list", invoiceGetAll)
+router.post("/delete/:id", invoiceDelete)
 
 export default router;

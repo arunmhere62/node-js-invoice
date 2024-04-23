@@ -42,20 +42,16 @@ const serviceUpdate = async (req, res) => {
 const getServiceById = async (req, res) => {
     try {
         const { id } = req.params;
-
         // Validate ID
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid service ID" });
         }
-
         // Find service by ID
         const service = await Service.findById(id);
-
         // Check if service exists
         if (!service) {
             return res.status(404).json({ message: "Service not found" });
         }
-
         // Return the service
         res.status(200).json(service);
     } catch (error) {
@@ -63,7 +59,6 @@ const getServiceById = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
-
 
 const serviceDelete = async (req, res) => {
     try {

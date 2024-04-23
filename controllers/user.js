@@ -1,48 +1,105 @@
 import { UserLogin } from "../models/user.js";
 import jwt from "jsonwebtoken";
 import crypto from 'crypto';
+import bcrypt from "bcrypt";
 
+// ! ------ login -------
+const userLogin = async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ 'message': 'Username and password are required.' });
 
-// -----------------------------to insert the loggedIn users-----------------------------------
-const userRegistration = async (req, res) => {
     try {
-        const { username, email, password } = req.body;
-        const newData = new UserLogin({ username, email, password });
-        const saveData = await newData.save();
-        res.status(201).json(saveData);
+        const foundUser = await UserLogin.findOne({ username }).exec();
+        if (!foundUser) return res.sendStatus(401); // Unauthorized 
+
+        // Evaluate password
+        const match = await bcrypt.compare(password, foundUser.password);
+        if (!match) return res.sendStatus(401);
+
+        // Extract roles from the user document, handle the case where roles are undefined or null
+        const roles = foundUser.roles ? Object.values(foundUser.roles).filter(Boolean) : [];
+
+        // Create access token
+        const accessToken = jwt.sign(
+            {
+                "UserInfo": {
+                    "username": foundUser.username,
+                    "roles": roles
+                }
+            },
+            "secret-key",
+            { expiresIn: '30min' }
+        );
+
+        // Check if the user already has a refresh token
+        let refreshToken = foundUser.refreshToken.find(token => {
+            try {
+                jwt.verify(token, "secret-key");
+                return true; // Token is valid
+            } catch (err) {
+                if (err.name === 'TokenExpiredError') {
+                    return false; // Token has expired
+                } else {
+                    throw err; // Other token verification errors
+                }
+            }
+        });
+
+        if (!refreshToken) {
+            // Generate a new refresh token
+            refreshToken = jwt.sign(
+                { "username": foundUser.username },
+                "secret-key",
+                { expiresIn: '30days' }
+            );
+            // Update user's refresh tokens
+            foundUser.refreshToken.push(refreshToken);
+            await foundUser.save();
+        }
+
+        // Return both access token and refresh token in the response body
+        res.json({ accessToken, refreshToken });
     } catch (error) {
-        console.log(error);
+        console.error("Error occurred during login:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
 
-const secretKey = 'yourSecretKey';
-
-
-const userLogin = async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
-        let user;
-        if (email) {
-            user = await UserLogin.findOne({ email, password })
-        }
-        else if (username) {
-            user = await UserLogin.findOne({ username, password })
-        } else {
-            return res.status(400).json({ message: "please provide either username or password" })
-        }
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        const token = jwt.sign({ email: user.email }, secretKey, { expiresIn: "24hr" });
-        res.status(200).json({ token });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "Internal server error" });
+// ! ------  handle new user  -------
+const userRegistration = async (req, res) => {
+    const { username, password, role } = req.body;
+    // Validate input
+    if (!username || !password || !role) {
+        return res.status(400).json({ message: 'Username, password, and role are required.' });
     }
-}
+    try {
+        // Check for duplicate usernames in the database
+        const duplicate = await UserLogin.findOne({ username: username }).exec();
+        if (duplicate) {
+            return res.status(409).json({ message: 'Username already exists.' }); // Conflict
+        }
 
+        // Encrypt the password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Create and store the new username
+        const newUser = await UserLogin.create({
+            username: username,
+            password: hashedPassword,
+            role: role // Assign the provided role
+        });
+
+        console.log('New user created:', newUser);
+
+        // Log successful username creation
+        // ...
+
+        return res.status(201).json({ success: `New username ${username} created!` });
+    } catch (err) {
+        console.error('Error creating user:', err);
+        return res.status(500).json({ message: 'Internal server error.' });
+    }
+};
 
 // -----------------------------to update all users-----------------------------------
 const updateUserData = async (req, res) => {
