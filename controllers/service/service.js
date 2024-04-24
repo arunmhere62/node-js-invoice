@@ -16,15 +16,22 @@ const serviceCreate = async (req, res) => {
 const servicesList = async (req, res) => {
     try {
         const services = await Service.find();
-        res.status(200).json(services)
+        // Convert Mongoose documents to plain JavaScript objects and replace _id with id field
+        const modifiedServices = services.map(doc => {
+            const obj = doc.toObject();
+            obj.id = obj._id; // Replace _id with id field
+            delete obj._id; // Remove _id field
+            return obj;
+        });
+        res.status(200).json(modifiedServices);
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: "Internal Server Error" })
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
 
+
 const serviceUpdate = async (req, res) => {
-    console.log(req.body);
     try {
         const { id } = req.params;
         const update = req.body;
