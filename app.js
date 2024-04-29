@@ -9,6 +9,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import verifyJWT from "./middleware/verifyJWT.js";
 import handleRefreshToken from "./controllers/refreshToken.js";
+import { userLogin } from "./controllers/user.js";
 
 dotenv.config();
 
@@ -24,7 +25,8 @@ app.use(cors({
 app.use(express.json());
 
 // Define routes
-app.use("", userRouter);
+app.post("/login", userLogin);
+app.use("/user", userRouter);
 app.get("/refresh", handleRefreshToken);
 app.use(verifyJWT); // Applying middleware globally
 app.use("/product", productRouter);
