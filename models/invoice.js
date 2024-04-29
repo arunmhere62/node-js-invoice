@@ -41,14 +41,17 @@ const BaseInvoiceSchema = mongoose.Schema({
         require: true,
         type: String
     },
-    service: [],
     servicesList: [
         {
             serviceAccountingCode: {
                 require: true,
                 type: String
             },
-            qty: {
+            serviceDescription: {
+                require: true,
+                type: String
+            },
+            quantity: {
                 require: true,
                 type: Number
             },

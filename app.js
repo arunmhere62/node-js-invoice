@@ -24,7 +24,7 @@ app.use(cors({
 app.use(express.json());
 
 // Define routes
-app.use("/user", userRouter);
+app.use("", userRouter);
 app.get("/refresh", handleRefreshToken);
 app.use(verifyJWT); // Applying middleware globally
 app.use("/product", productRouter);
