@@ -5,6 +5,9 @@ import productRouter from "./routes/product.js";
 import clientRouter from "./routes/customer.js";
 import serviceRouter from "./routes/services.js";
 import invoiceRouter from "./routes/invoice.js";
+import tdsTaxRouter from "./routes/taxes/tdsTax.js"
+import gstType from "./routes/taxes/gstType.js"
+import paymentTerms from "./routes/paymentTerms.js"
 import cors from "cors";
 import dotenv from "dotenv";
 import verifyJWT from "./middleware/verifyJWT.js";
@@ -33,6 +36,9 @@ app.use("/product", productRouter);
 app.use("/customer", clientRouter);
 app.use("/service", serviceRouter);
 app.use("/invoice", invoiceRouter);
+app.use("/tdsTax", tdsTaxRouter);
+app.use("/gstType", gstType);
+app.use("/paymentTerms", paymentTerms);
 
 // Connect to MongoDB
 mongoose

@@ -29,7 +29,7 @@ const BaseInvoiceSchema = mongoose.Schema({
         require: true,
         type: String
     },
-    invoiceDate: {
+    startDate: {
         require: true,
         type: String
     },
@@ -48,7 +48,7 @@ const BaseInvoiceSchema = mongoose.Schema({
                 type: String
             },
             serviceDescription: {
-                require: true,
+                require: false,
                 type: String
             },
             quantity: {
