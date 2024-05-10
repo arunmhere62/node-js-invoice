@@ -19,7 +19,7 @@ const BaseInvoiceSchema = mongoose.Schema({
     },
     gstPercentage: {
         require: true,
-        type: String
+        type: Number
     },
     gstInNumber: {
         require: true,
@@ -31,15 +31,41 @@ const BaseInvoiceSchema = mongoose.Schema({
     },
     startDate: {
         require: true,
-        type: String
+        type: Date
     },
     dueDate: {
         require: true,
-        type: String
+        type: Date
+    },
+    invoiceDate: {
+        require: true,
+        type: Date
     },
     invoiceStatus: {
         require: true,
         type: String
+    },
+    discountPercentage: {
+        require: true,
+        type: Number
+    },
+    notes: {
+        require: true,
+        type: String,
+    },
+    termsAndConditions: {
+        require: true,
+        type: String,
+    },
+    taxAmount: {
+        tds: {
+            type: String,
+            default: 'FRT121'
+        }
+    },
+    invoiceTotalAmount: {
+        require: true,
+        type: Number
     },
     servicesList: [
         {
