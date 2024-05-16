@@ -41,12 +41,16 @@ const getTdsById = async (req, res) => {
         if (!tds) {
             return res.status(404).json({ message: "TDS Not Found" })
         }
-        res.status(200).json(tds);
+        // Convert _id to string format
+        const tdsWithIdAsString = { ...tds.toObject(), id: tds._id.toString() };
+        delete tdsWithIdAsString._id; // Remove the original _id field
+        res.status(200).json(tdsWithIdAsString);
     } catch (error) {
         console.error("Error Fetching TDS by ID :", error);
-        res.status(500).json({ message: " Internal server error" })
+        res.status(500).json({ message: "Internal server error" })
     }
 }
+
 
 const updateTdsById = async (req, res) => {
     try {

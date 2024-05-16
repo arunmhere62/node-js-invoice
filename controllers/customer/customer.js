@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import { Customer } from "../../models/customer.js";
+import { customerValidation } from "../../validations/validations.js";
+import * as Yup from 'yup';
 
 const customerCreate = async (req, res) => {
     try {
         const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
 
+        await customerValidation.validate(req.body, { abortEarly: false });
         const newCustomer = new Customer({
             customerName,
             customerType,
@@ -22,6 +25,11 @@ const customerCreate = async (req, res) => {
         const savedCustomer = await newCustomer.save();
         res.status(201).json(savedCustomer);
     } catch (error) {
+        if (error instanceof Yup.ValidationError) {
+            // Handle validation errors
+            const validationErrors = error.inner.map(err => ({ path: err.path, message: err.message }));
+            return res.status(400).json({ errors: validationErrors });
+        }
         console.error('Error creating customer:', error);
         res.status(500).json({ message: 'Internal server error' });
     }

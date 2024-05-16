@@ -38,7 +38,13 @@ const getGstTypeById = async (req, res) => {
         if (!gstType) {
             return res.status(404).json({ message: "gstType Not Found" })
         }
-        res.status(200).json(gstType);
+
+        // Modify the _id field to id
+        const { _id, ...modifiedGstType } = gstType.toObject();
+        modifiedGstType.id = _id;
+        delete modifiedGstType._id;
+
+        res.status(200).json(modifiedGstType);
     } catch (error) {
         console.error("Error Fetching gstType by ID :", error);
         res.status(500).json({ message: " Internal server error" })
@@ -47,7 +53,8 @@ const getGstTypeById = async (req, res) => {
 
 const updateGstTypeById = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id } = req.body;
+        console.log(id);
         const { gstName, gstPercentage } = req.body;
         const updateTds = await GstTypeSchema.findByIdAndUpdate(id, { gstName, gstPercentage }, { new: true });
         if (!updateTds) {
