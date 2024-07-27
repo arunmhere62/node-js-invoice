@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { BaseInvoice, OneTimeInvoice, RetainerInvoice } from "../../models/invoice.js";
 import { invoiceValidation } from "../../validations/validations.js";
-import { servicesList } from "../service/service.js";
 
 const invoiceCreate = async (req, res) => {
     try {
@@ -14,7 +13,6 @@ const invoiceCreate = async (req, res) => {
             // If validation fails, return error response with validation errors
             return res.status(400).json({ error: 'Validation error', details: validationError.errors });
         }
-
         let InvoiceModel;
         switch (invoiceData.invoiceType) {
             case 'RetainerInvoice':
@@ -81,7 +79,33 @@ const invoiceGetAll = async (req, res) => {
     }
 }
 
+const invoiceGetAllData = async (req, res) => {
+    try {
+        const aggregatedData = await BaseInvoice.aggregate([
+            {
+                $group: {
+                    _id: "$paymentTerms",
+                    count: {
+                        $sum: 1
+                    },
+                },
+            },
+            // {
+            //     $sort: {
+            //         count: 1
+            //     }
+            // },
+            // {
+            //     $limit: 3
+            // }
+        ]);
 
+        res.status(200).json(aggregatedData);
+    } catch (error) {
+        console.error('Error creating invoice:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
 
 const invoiceDelete = async (req, res) => {
     try {
@@ -143,4 +167,4 @@ const invoiceUpdate = async (req, res) => {
 }
 
 
-export { invoiceCreate, invoiceGetAll, invoiceDelete, invoiceGetById, invoiceUpdate };
+export { invoiceCreate, invoiceGetAll, invoiceDelete, invoiceGetById, invoiceUpdate, invoiceGetAllData };

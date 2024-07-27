@@ -63,7 +63,7 @@ const BaseInvoiceSchema = mongoose.Schema({
             default: 'FRT121'
         }
     },
-    invoiceTotalAmount: {
+    totalAmount: {
         require: true,
         type: Number
     },
@@ -77,11 +77,11 @@ const BaseInvoiceSchema = mongoose.Schema({
                 require: false,
                 type: String
             },
-            quantity: {
+            serviceQty: {
                 require: true,
                 type: Number
             },
-            price: {
+            serviceTotalAmount: {
                 require: true,
                 type: Number
             },

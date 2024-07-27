@@ -1,10 +1,15 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
-  username: {
+  email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    match: [/.+@.+\..+/, "Please enter a valid email address"]
+  },
+  userName: {
+    type: String,
+    required: true
   },
   password: {
     type: String,
@@ -12,8 +17,18 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'superadmin', 'user'],
-    default: 'user'
+    enum: ['ADMIN', 'SUPERADMIN', 'APPROVER', 'STANDARDUSER'],
+    required: true,
+  },
+  userMobile: {
+    type: String
+  },
+  description: {
+    type: String
+  },
+  companyDetailsId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CompanyDetails'
   },
   refreshToken: [String]
 });

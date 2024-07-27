@@ -1,11 +1,11 @@
 import express from 'express';
 import { getAllUsers, getUserByNameOrId, getUserData, updateUserData, userLogin, userRegistration } from '../controllers/user.js';
-import verifyToken from '../middleware/authorization.js';
+import verifyJWT from '../middleware/verifyJWT.js';
 
 // import { UserLogin } from '../models/user';
 
 const router = express.Router();
-router.post("/register", userRegistration);
+router.post("/register", verifyJWT, userRegistration);
 router.get("/login", getUserData);
 router.put("/:id", updateUserData);
 router.get("/allUser", getAllUsers);

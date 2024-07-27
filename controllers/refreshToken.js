@@ -33,7 +33,7 @@ const handleRefreshToken = async (req, res) => {
                 }
             },
             "secret-key",
-            { expiresIn: '30min' }
+            { expiresIn: '5h' }
         );
 
         // You may want to generate a new refresh token as well, depending on your application logic

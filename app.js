@@ -1,7 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
 import userRouter from './routes/users.js';
-import productRouter from "./routes/product.js";
 import clientRouter from "./routes/customer.js";
 import serviceRouter from "./routes/services.js";
 import invoiceRouter from "./routes/invoice.js";
@@ -29,10 +28,9 @@ app.use(express.json());
 
 // Define routes
 app.post("/login", userLogin);
-app.use("/user", userRouter);
 app.get("/refresh", handleRefreshToken);
+app.use("/user", userRouter);
 app.use(verifyJWT); // Applying middleware globally
-app.use("/product", productRouter);
 app.use("/customer", clientRouter);
 app.use("/service", serviceRouter);
 app.use("/invoice", invoiceRouter);

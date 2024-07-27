@@ -25,8 +25,8 @@ const invoiceValidation = Yup.object().shape({
         Yup.object().shape({
             serviceAccountingCode: Yup.string().required(),
             serviceDescription: Yup.string(),
-            quantity: Yup.number().required(),
-            price: Yup.number().required(),
+            serviceQty: Yup.number().required(),
+            serviceTotalAmount: Yup.number().required(),
             serviceAmount: Yup.number().required()
         })
     )

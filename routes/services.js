@@ -1,5 +1,4 @@
 import express from 'express';
-import verifyToken from '../middleware/authorization.js';
 import { getServiceById, serviceCreate, serviceDelete, serviceUpdate, servicesList } from '../controllers/service/service.js';
 
 const router = express.Router();

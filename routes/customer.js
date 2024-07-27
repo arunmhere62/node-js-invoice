@@ -1,6 +1,5 @@
 import express from 'express';
 import { customerCreate, customerGetAll, customerDeleteById, customerUpdate, customerGetParticular } from '../controllers/customer/customer.js';
-import verifyToken from '../middleware/authorization.js';
 
 const router = express.Router();
 
