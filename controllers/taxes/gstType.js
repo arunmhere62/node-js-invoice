@@ -3,28 +3,33 @@ import { GstTypeSchema } from "../../models/taxes/gstType.js";
 const createGstType = async (req, res) => {
     try {
         const { gstName, gstPercentage } = req.body;
-        const newData = new GstTypeSchema({ gstName, gstPercentage })
-        const savedData = await newData.save();
-        res.status(201).json(savedData);
+        const companyId = req.companyId || null;
+        const createdBy = req.userName || null;
+        // Ensure companyId is provided
+        if (!companyId || !createdBy) {
+            return res.status(400).json({ message: 'companyId or createdBy is required' });
+        }
+
+        const newGstType = new GstTypeSchema({
+            gstName,
+            gstPercentage,
+            companyId,
+            createdBy,
+        });
+
+        const savedGstType = await newGstType.save();
+        res.status(201).json(savedGstType);
     } catch (error) {
         console.error('Error creating gstType:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-}
+};
+
 
 const getGstTypeList = async (req, res) => {
     try {
-        const gstTypesList = await GstTypeSchema.aggregate([
-            {
-                $project: {
-                    _id: 0, // Exclude the _id field
-                    id: "$_id",
-                    gstName: 1,
-                    gstPercentage: 1
-                }
-            }
-        ]);
-        res.status(200).json(gstTypesList);
+        const gstTypeList = await GstTypeSchema.find();
+        res.status(200).json(gstTypeList);
     } catch (error) {
         console.error("Error Fetching gstTypes List :", error);
         res.status(500).json({ message: "Internal Server Error " });
@@ -35,16 +40,7 @@ const getGstTypeById = async (req, res) => {
     try {
         const { id } = req.params;
         const gstType = await GstTypeSchema.findById(id);
-        if (!gstType) {
-            return res.status(404).json({ message: "gstType Not Found" })
-        }
-
-        // Modify the _id field to id
-        const { _id, ...modifiedGstType } = gstType.toObject();
-        modifiedGstType.id = _id;
-        delete modifiedGstType._id;
-
-        res.status(200).json(modifiedGstType);
+        res.status(200).json(gstType);
     } catch (error) {
         console.error("Error Fetching gstType by ID :", error);
         res.status(500).json({ message: " Internal server error" })
@@ -53,10 +49,15 @@ const getGstTypeById = async (req, res) => {
 
 const updateGstTypeById = async (req, res) => {
     try {
-        const { id } = req.body;
-        console.log(id);
+        const { id } = req.params;
+        const updatedBy = req.userName || null;
         const { gstName, gstPercentage } = req.body;
-        const updateTds = await GstTypeSchema.findByIdAndUpdate(id, { gstName, gstPercentage }, { new: true });
+        const gstTypeModal = {
+            gstName,
+            gstPercentage,
+            updatedBy
+        }
+        const updateTds = await GstTypeSchema.findByIdAndUpdate(id, gstTypeModal, { new: true });
         if (!updateTds) {
             return res.status(404).json({ message: "gstType not found" })
         }

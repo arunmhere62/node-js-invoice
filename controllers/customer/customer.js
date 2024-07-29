@@ -7,8 +7,10 @@ const customerCreate = async (req, res) => {
     try {
         const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
 
-        await customerValidation.validate(req.body, { abortEarly: false });
+        const createdBy = req.userName || null;
+        // await customerValidation.validate(req.body, { abortEarly: false });
         const newCustomer = new Customer({
+            createdBy,
             customerName,
             customerType,
             companyName,
@@ -25,18 +27,12 @@ const customerCreate = async (req, res) => {
         const savedCustomer = await newCustomer.save();
         res.status(201).json(savedCustomer);
     } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-            // Handle validation errors
-            const validationErrors = error.inner.map(err => ({ path: err.path, message: err.message }));
-            return res.status(400).json({ errors: validationErrors });
-        }
         console.error('Error creating customer:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
 
 const customerGetParticular = async (req, res) => {
-    console.log("customer get particular");
     try {
         const { id } = req.params;
         const customer = await Customer.findById(id);
@@ -53,18 +49,7 @@ const customerGetParticular = async (req, res) => {
 const customerGetAll = async (req, res) => {
     try {
         const clients = await Customer.find();
-        const transformedClients = clients.map(client => {
-            const { _id, ...rest } = client.toObject();
-            return {
-                ...rest,
-                id: _id,
-                contactPersons: client.contactPersons.map(contactPerson => ({
-                    ...contactPerson.toObject(),
-                    id: contactPerson._id
-                }))
-            };
-        });
-        res.status(200).json(transformedClients);
+        res.status(200).json(clients);
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Internal server error" });
@@ -75,18 +60,23 @@ const customerUpdate = async (req, res) => {
     try {
         const { id } = req.params;
         const update = req.body;
+
+        // Extract userName from the request object
+        const { userName } = req;
+
+        // Include updatedBy field
+        update.updatedBy = userName || null;
+
         const result = await Customer.findByIdAndUpdate(id, update, { new: true });
         if (!result) {
-            return res.status(404).json({ message: "Customer not found" })
+            return res.status(404).json({ message: "Customer not found" });
         }
         res.json(result);
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: "internal server error" })
+        res.status(500).json({ message: "Internal server error" });
     }
-}
-
-
+};
 
 const customerDeleteById = async (req, res) => {
     try {

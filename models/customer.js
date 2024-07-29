@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import '../mongoose-plugin.js';
 
 const ContactPersonSchema = mongoose.Schema({
     contactName: {
@@ -60,7 +61,20 @@ const CustomerSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    contactPersons: [ContactPersonSchema],
+    contactPersons: {
+        type: [ContactPersonSchema],
+        default: [],
+    },
+    createdBy: {
+        type: String,
+        required: false,
+        default: null,
+    },
+    updatedBy: {
+        type: String,
+        required: false,
+        default: null,
+    },
 });
 
 const Customer = mongoose.model("customer", CustomerSchema);

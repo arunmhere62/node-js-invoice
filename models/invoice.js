@@ -1,114 +1,153 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const BaseInvoiceSchema = mongoose.Schema({
+// Define the base schema for all invoices
+const BaseInvoiceSchema = new mongoose.Schema({
     invoiceType: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     invoiceNumber: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     customerName: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     gstType: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     gstPercentage: {
-        require: true,
-        type: Number
+        type: Number,
+        required: true
     },
     gstInNumber: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     paymentTerms: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     startDate: {
-        require: true,
-        type: Date
+        type: Date,
+        required: true
     },
     dueDate: {
-        require: true,
-        type: Date
+        type: Date,
+        required: true
     },
     invoiceDate: {
-        require: true,
-        type: Date
+        type: Date,
+        required: true
     },
     invoiceStatus: {
-        require: true,
-        type: String
+        type: String,
+        required: true
     },
     discountPercentage: {
-        require: true,
-        type: Number
+        type: Number,
+        required: true
     },
     notes: {
-        require: true,
         type: String,
+        required: false
     },
     termsAndConditions: {
-        require: true,
         type: String,
+        required: false
     },
     taxAmount: {
         tds: {
             type: String,
-            default: 'FRT121'
+            required: false,
         }
     },
     totalAmount: {
-        require: true,
-        type: Number
+        type: Number,
+        required: true
     },
     servicesList: [
         {
             serviceAccountingCode: {
-                require: true,
-                type: String
+                type: String,
+                required: true
             },
             serviceDescription: {
-                require: false,
-                type: String
+                type: String,
+                required: false
             },
             serviceQty: {
-                require: true,
-                type: Number
+                type: Number,
+                required: true
             },
             serviceTotalAmount: {
-                require: true,
-                type: Number
+                type: Number,
+                required: true
             },
             serviceAmount: {
-                require: true,
-                type: Number
+                type: Number,
+                required: true
             }
-        },
-    ]
+        }
+    ],
+    createdBy: {
+        type: String,
+        required: false,
+        default: null,
+    },
+    updatedBy: {
+        type: String,
+        required: false,
+        default: null,
+    },
+    companyId: {
+        required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CompanyDetails'
+    },
+    invoiceReason: {
+        type: String,
+        required: false
+    },
+    mailTo: {
+        type: String,
+        required: false
+    },
+    lastModified: {
+        type: Date,
+        required: false,
+        default: Date.now
+    },
+    invoiceStages: {
+        stage1: { type: String, default: null },
+        stage2: { type: String, default: null },
+        stage3: { type: String, default: null },
+        stage4: { type: String, default: null },
+        stage5: { type: String, default: null },
+        stage6: { type: String, default: null }
+    }
 }, { discriminatorKey: 'type' });
 
+// Define the schema for retainer invoices
 const RetainerInvoiceSchema = new mongoose.Schema({
-    retainerFees: {
-        require: true,
-        type: Number
-    },
+    retainerFee: {
+        type: Number,
+        required: true
+    }
 });
 
+// Define the schema for one-time invoices
 const OneTimeInvoiceSchema = new mongoose.Schema({
-    //    
+    // Any specific fields for one-time invoices can be added here
 });
 
-const BaseInvoice = mongoose.model("invoice", BaseInvoiceSchema);
+// Create the base model
+const BaseInvoice = mongoose.model("Invoice", BaseInvoiceSchema);
+
+// Create discriminators
 const RetainerInvoice = BaseInvoice.discriminator('RetainerInvoice', RetainerInvoiceSchema);
 const OneTimeInvoice = BaseInvoice.discriminator('OneTimeInvoice', OneTimeInvoiceSchema);
 
 export { BaseInvoice, RetainerInvoice, OneTimeInvoice };
-
-
-

@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
+import '../mongoose-plugin.js';
 
 const userSchema = new mongoose.Schema({
-  email: {
+  userEmail: {
     type: String,
     required: true,
     unique: true,
-    match: [/.+@.+\..+/, "Please enter a valid email address"]
   },
   userName: {
     type: String,
@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
   description: {
     type: String
   },
-  companyDetailsId: {
+  companyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'CompanyDetails'
   },

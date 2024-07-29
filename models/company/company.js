@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import '../../mongoose-plugin.js';
 
 const companyDetailsSchema = new mongoose.Schema({
     companyName: {
@@ -30,7 +31,6 @@ const companyDetailsSchema = new mongoose.Schema({
     companyWebsite: {
         type: String,
         required: true,
-        match: [/^https?:\/\/.+\..+/, "Please enter a valid URL"]
     },
     companyTaxNumber: {
         type: String,
@@ -39,7 +39,8 @@ const companyDetailsSchema = new mongoose.Schema({
     companyRegNumber: {
         type: String,
         required: true
-    }
+    },
+
 });
 
 const CompanyDetails = mongoose.model('CompanyDetails', companyDetailsSchema);

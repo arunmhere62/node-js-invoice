@@ -3,8 +3,13 @@ import { TdsSchema } from "../../models/taxes/tdsTax.js";
 const createTds = async (req, res) => {
     try {
         const { taxName, taxPercentage } = req.body;
-
-        const newData = new TdsSchema({ taxName, taxPercentage })
+        const companyId = req.companyId;
+        const createdBy = req.userName;
+        // Ensure companyId is provided
+        if (!companyId || !createdBy) {
+            return res.status(400).json({ message: 'createdBy and companyId is required' });
+        }
+        const newData = new TdsSchema({ taxName, taxPercentage, companyId, createdBy })
         const savedData = await newData.save();
         res.status(201).json(savedData);
     } catch (error) {
@@ -15,24 +20,13 @@ const createTds = async (req, res) => {
 
 const getTdsList = async (req, res) => {
     try {
-        const tdsList = await TdsSchema.aggregate([
-            {
-                $project: {
-                    id: "$_id",
-                    _id: 0,
-                    taxName: 1,
-                    taxPercentage: 1,
-                }
-            }
-        ]);
-
+        const tdsList = await TdsSchema.find();
         res.status(200).json(tdsList);
     } catch (error) {
         console.error("Error Fetching TDS List:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
-
 
 const getTdsById = async (req, res) => {
     try {
@@ -41,22 +35,22 @@ const getTdsById = async (req, res) => {
         if (!tds) {
             return res.status(404).json({ message: "TDS Not Found" })
         }
-        // Convert _id to string format
-        const tdsWithIdAsString = { ...tds.toObject(), id: tds._id.toString() };
-        delete tdsWithIdAsString._id; // Remove the original _id field
-        res.status(200).json(tdsWithIdAsString);
+        res.status(200).json(tds);
     } catch (error) {
         console.error("Error Fetching TDS by ID :", error);
         res.status(500).json({ message: "Internal server error" })
     }
 }
 
-
 const updateTdsById = async (req, res) => {
     try {
         const { id } = req.params;
+        const updatedBy = req.userName;
         const { taxName, taxPercentage } = req.body;
-        const updateIds = await TdsSchema.findByIdAndUpdate(id, { taxName, taxPercentage }, { new: true });
+        if (!updatedBy) {
+            return res.status(400).json({ message: 'updatedBy is required' });
+        }
+        const updateIds = await TdsSchema.findByIdAndUpdate(id, { updatedBy, taxName, taxPercentage, updatedBy }, { new: true });
         if (!updateIds) {
             return res.status(404).json({ message: "TDS not found" })
         }

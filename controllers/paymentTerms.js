@@ -6,19 +6,16 @@ import * as Yup from 'yup';
 const createPaymentTerms = async (req, res) => {
     try {
         const { termName, totalDays } = req.body;
-        // Validate the request data against the yup schema
-        await paymentTermsValidation.validate({ termName, totalDays }, { abortEarly: false });
-        const newData = new PaymentTermsSchema({ termName, totalDays });
+        const companyId = req.companyId;
+        const createdBy = req.userName;
+        // Ensure companyId is provided
+        if (!companyId || !createdBy) {
+            return res.status(400).json({ message: 'createdBy and companyId is required' });
+        }
+        const newData = new PaymentTermsSchema({ termName, totalDays, companyId, createdBy });
         const savedData = await newData.save();
         res.status(201).json(savedData);
     } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-            const validationErrors = error.inner.map(err => ({
-                field: err.path,
-                message: err.message
-            }));
-            return res.status(400).json({ errors: validationErrors });
-        }
         console.error("Error creating new terms:", error)
         res.status(500).json({ message: "Internal server error" });
     }
@@ -26,16 +23,7 @@ const createPaymentTerms = async (req, res) => {
 
 const getAllPaymentTerms = async (req, res) => {
     try {
-        const paymentTerms = await PaymentTermsSchema.aggregate([
-            {
-                $project: {
-                    id: "$_id",
-                    _id: 0,
-                    termName: 1,
-                    totalDays: 1
-                }
-            }
-        ]);
+        const paymentTerms = await PaymentTermsSchema.find();
         res.status(200).json(paymentTerms);
     } catch (error) {
         console.error("Error fetching payment terms:", error);
@@ -50,12 +38,7 @@ const getPaymentTermById = async (req, res) => {
         if (!paymentTerm) {
             return res.status(404).json({ message: "Payment term not found" });
         }
-
-        // Destructuring and renaming _id to id
-        const { _id, ...paymentTermWithoutId } = paymentTerm.toObject();
-        const updatedPaymentTerm = { id: _id, ...paymentTermWithoutId };
-
-        res.status(200).json(updatedPaymentTerm);
+        res.status(200).json(paymentTerm);
     } catch (error) {
         console.error("Error fetching payment term by ID:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -65,15 +48,17 @@ const getPaymentTermById = async (req, res) => {
 const updatePaymentTermById = async (req, res) => {
     try {
         const { id } = req.params;
-
+        const updatedBy = req.userName;
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: "Invalid id format" });
         }
-
         const { termName, totalDays } = req.body;
+        if (!updatedBy) {
+            return res.status(400).json({ message: 'updatedBy is required' });
+        }
         const updatedPaymentTerm = await PaymentTermsSchema.findByIdAndUpdate(
             id,
-            { termName, totalDays },
+            { termName, totalDays, updatedBy },
             { new: true }
         );
         if (!updatedPaymentTerm) {

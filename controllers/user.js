@@ -1,18 +1,19 @@
+import mongoose from "mongoose";
 import { UserLogin } from "../models/user.js";
 import jwt from "jsonwebtoken";
 import crypto from 'crypto';
 import bcrypt from "bcrypt";
 
 import { CompanyDetails } from "../models/company/company.js";
+import { ROLE } from "../services/enums.js";
 
 // ! ------ login -------
-
 const userLogin = async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Email and password are required.' });
+    const { userEmail, password } = req.body;
+    if (!userEmail || !password) return res.status(400).json({ message: 'Email and password are required.' });
 
     try {
-        const foundUser = await UserLogin.findOne({ email }).exec();
+        const foundUser = await UserLogin.findOne({ userEmail }).exec();
         if (!foundUser) return res.sendStatus(401); // Unauthorized 
 
         // Evaluate password
@@ -21,9 +22,9 @@ const userLogin = async (req, res) => {
 
         // Fetch company details if available
         let companyDetails = null;
-        if (foundUser.companyDetailsId) {
-            console.log('Fetching company details for ID:', foundUser.companyDetailsId);
-            companyDetails = await CompanyDetails.findById(foundUser.companyDetailsId).exec();
+        if (foundUser.companyId) {
+
+            companyDetails = await CompanyDetails.findById(foundUser.companyId).exec();
             if (!companyDetails) {
                 return res.status(500).json({ message: "Company details not found." });
             }
@@ -36,11 +37,11 @@ const userLogin = async (req, res) => {
         const accessToken = jwt.sign(
             {
                 "UserInfo": {
-                    "email": foundUser.email,
+                    "userEmail": foundUser.userEmail,
                     "userName": foundUser.userName,
                     "role": foundUser.role,
                     "companyName": companyDetails ? companyDetails.companyName : null,
-                    "companyId": companyDetails ? companyDetails._id : null,
+                    "companyId": companyDetails ? companyDetails.id : null,
                 }
             },
             "secret-key",
@@ -64,7 +65,7 @@ const userLogin = async (req, res) => {
             // Generate a new refresh token
             refreshToken = jwt.sign(
                 {
-                    "email": foundUser.email,
+                    "userEmail": foundUser.userEmail,
                     "userName": foundUser.userName,
                     "role": foundUser.role
                 },
@@ -79,12 +80,15 @@ const userLogin = async (req, res) => {
         // Return access token, refresh token, user details, and company details in the response body
         res.json({
             accessToken,
-            refreshToken,
+            refresh: refreshToken,
+            userEmail: foundUser.userEmail,
+            userName: foundUser.userName,
+            userRole: foundUser.role,
             userDetails: {
                 register: {
-                    email: foundUser.email,
+                    userEmail: foundUser.userEmail,
                     userName: foundUser.userName,
-                    role: foundUser.role,
+                    userRole: foundUser.role,
                     userMobile: foundUser.userMobile,
                     description: foundUser.description
                 },
@@ -107,31 +111,52 @@ const userLogin = async (req, res) => {
     }
 };
 
-
-// ! ------------ user registration 
 const userRegistration = async (req, res) => {
-    const { email, userName, password, userMobile, description, role, companyName, companyEmail, companyPhone, companyCountry, companyState, companyAddress, companyWebsite, companyTaxNumber, companyRegNumber } = req.body;
+    const {
+        userEmail,
+        userName,
+        password,
+        userMobile,
+        description,
+        role,
+        companyName,
+        companyEmail,
+        companyPhone,
+        companyCountry,
+        companyState,
+        companyAddress,
+        companyWebsite,
+        companyTaxNumber,
+        companyRegNumber
+    } = req.body;
 
     const tokenRoles = req.role; // Extract roles from the request object
     const companyIdFromToken = req.companyId; // Extract company ID from the token
 
-    console.log("companyIdFromToken:", companyIdFromToken);
-
     // Check if the role is valid
-    const validRoles = ['ADMIN', 'APPROVER', 'STANDARDUSER', 'SUPERADMIN'];
+    const validRoles = [ROLE.ADMIN, ROLE.SUPERADMIN, ROLE.APPROVER, ROLE.STANDARDUSER];
     if (!validRoles.includes(role)) {
         return res.status(400).json({ message: 'Invalid role provided.' });
     }
 
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        if (role === 'SUPERADMIN') {
+        // Check if user email already exists
+        const existingUser = await UserLogin.findOne({ userEmail }).exec();
+        if (existingUser) {
+            return res.status(409).json({ message: 'User with this email already exists.' });
+        }
+
+        if (role === ROLE.SUPERADMIN) {
             // Validate company details for SUPERADMIN
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
                 return res.status(400).json({ message: 'All company details are required for SUPERADMIN role.' });
             }
 
             // Check if a SUPERADMIN already exists
-            const superAdminExists = await UserLogin.findOne({ role: 'SUPERADMIN' }).exec();
+            const superAdminExists = await UserLogin.findOne({ role: ROLE.SUPERADMIN }).exec();
             if (superAdminExists) {
                 return res.status(409).json({ message: 'A SUPERADMIN already exists.' });
             }
@@ -143,7 +168,7 @@ const userRegistration = async (req, res) => {
             }
 
             // Create company details for SUPERADMIN
-            const companyDetails = await CompanyDetails.create({
+            const companyDetails = new CompanyDetails({
                 companyName,
                 companyEmail,
                 companyPhone,
@@ -155,30 +180,39 @@ const userRegistration = async (req, res) => {
                 companyRegNumber
             });
 
+            // Save the company details in a transaction
+            await companyDetails.save({ session });
+
             // Create and store the new SUPERADMIN user
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await UserLogin.create({
-                email,
+            const newUser = new UserLogin({
+                userEmail,
                 userName,
                 password: hashedPassword,
                 role,
                 userMobile,
                 description,
-                companyDetailsId: companyDetails._id
+                companyId: companyDetails._id
             });
+
+            // Save the user in a transaction
+            await newUser.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
 
             console.log('New SUPERADMIN user created:', newUser);
 
-            return res.status(201).json({ success: `New SUPERADMIN user with email ${email} created!` });
-        } else if (role === 'ADMIN') {
+            return res.status(201).json({ success: `New SUPERADMIN user with email ${userEmail} created!` });
+        } else if (role === ROLE.ADMIN) {
             // Validate token for ADMIN role
-            if (!tokenRoles || !tokenRoles.includes('ADMIN')) {
+            if (!tokenRoles || !tokenRoles.includes(ROLE.ADMIN)) {
                 return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create users.' });
             }
 
             // Validate input for ADMIN role
-            if (!email || !userName || !password || !role) {
-                return res.status(400).json({ message: 'Email, userName, password, and role are required.' });
+            if (!userEmail || !userName || !password || !role) {
+                return res.status(400).json({ message: 'userEmail, userName, password, and role are required.' });
             }
 
             // Validate company details for ADMIN role
@@ -193,7 +227,7 @@ const userRegistration = async (req, res) => {
             }
 
             // Create or find the company details
-            const companyDetails = await CompanyDetails.create({
+            const companyDetails = new CompanyDetails({
                 companyName,
                 companyEmail,
                 companyPhone,
@@ -205,30 +239,39 @@ const userRegistration = async (req, res) => {
                 companyRegNumber
             });
 
+            // Save the company details in a transaction
+            await companyDetails.save({ session });
+
             // Create and store the new ADMIN user
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await UserLogin.create({
-                email,
+            const newUser = new UserLogin({
+                userEmail,
                 userName,
                 password: hashedPassword,
                 role,
                 userMobile,
                 description,
-                companyDetailsId: companyDetails._id
+                companyId: companyDetails._id
             });
+
+            // Save the user in a transaction
+            await newUser.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
 
             console.log('New ADMIN user created:', newUser);
 
-            return res.status(201).json({ success: `New ADMIN user with email ${email} created!` });
-        } else if (role === 'APPROVER' || role === 'STANDARDUSER') {
+            return res.status(201).json({ success: `New ADMIN user with email ${userEmail} created!` });
+        } else if (role === ROLE.APPROVER || role === ROLE.STANDARDUSER) {
             // Validate token for APPROVER and STANDARDUSER roles
-            if (!tokenRoles || !tokenRoles.includes('ADMIN')) {
+            if (!tokenRoles || !tokenRoles.includes(ROLE.ADMIN)) {
                 return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create users.' });
             }
 
             // Validate input for APPROVER and STANDARDUSER roles
-            if (!email || !userName || !password || !role) {
-                return res.status(400).json({ message: 'Email, userName, password, and role are required.' });
+            if (!userEmail || !userName || !password || !role) {
+                return res.status(400).json({ message: 'userEmail, userName, password, and role are required.' });
             }
 
             // Ensure company details are not provided for APPROVER and STANDARDUSER
@@ -248,21 +291,28 @@ const userRegistration = async (req, res) => {
 
             // Create and store the new APPROVER or STANDARDUSER
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await UserLogin.create({
-                email,
+            const newUser = new UserLogin({
+                userEmail,
                 userName,
                 password: hashedPassword,
                 role,
                 userMobile,
                 description,
-                companyDetailsId: companyIdFromToken
+                companyId: companyIdFromToken
             });
 
-            console.log('New APPROVER/STANDARDUSER created:', newUser);
+            // Save the user in a transaction
+            await newUser.save({ session });
 
-            return res.status(201).json({ success: `New user with email ${email} created!` });
+            await session.commitTransaction();
+            session.endSession();
+
+            return res.status(201).json({ success: `New user with email ${userEmail} created!` });
         }
     } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+
         if (err.code === 11000) {
             // Handle duplicate key error
             return res.status(409).json({ message: 'Duplicate key error. A record with this value already exists.' });
@@ -272,7 +322,7 @@ const userRegistration = async (req, res) => {
     }
 };
 
-// ! -----------------------------to update all users-----------------------------------
+// ! ----------- to update all users ------------
 const updateUserData = async (req, res) => {
     try {
         const { id } = req.params;
@@ -286,36 +336,50 @@ const updateUserData = async (req, res) => {
         console.log(error);
         res.status(500).json({ message: "internal server error" })
     }
-}
+};
 
 
-const getUserData = async (req, res) => {
-    try {
-        const { key, value } = req.query;
-        const query = { [key]: value };
-        const result = await UserLogin.findOne(query);
-        res.json(result);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-// -----------------------------to get all users-----------------------------------
+// ! get users list
 const getAllUsers = async (req, res) => {
+    const role = req.role;
+    const companyId = req.companyId;
     try {
-        const users = await UserLogin.find();
-        if (!users) {
-            return res.status(404).json({ message: 'Users not found' })
+        let matchCriteria;
+
+        if (role === ROLE.SUPERADMIN) {
+            matchCriteria = { role: 'admin' };
+        } else if (role === ROLE.ADMIN) {
+            matchCriteria = { companyId: new mongoose.Types.ObjectId(companyId) };
+        } else {
+            return res.status(403).json({ message: 'Access denied' });
         }
+
+        const users = await UserLogin.aggregate([
+            { $match: matchCriteria },
+            {
+                $project: {
+                    id: "$_id",
+                    userName: 1,
+                    userRole: "$role",
+                    userEmail: 1,
+                    password: 1,
+                    _id: 0
+                }
+            }
+        ]);
+
+        if (!users || users.length === 0) {
+            return res.status(404).json({ message: 'Users not found' });
+        }
+
         res.json(users);
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: "internal server error" })
+        res.status(500).json({ message: 'Internal server error' });
     }
-}
+};
 
-const getUserByNameOrId = async (req, res) => {
+const getSingleUser = async (req, res) => {
     try {
         const { id } = req.params;
         const user = await UserLogin.findById(id);
@@ -330,4 +394,4 @@ const getUserByNameOrId = async (req, res) => {
 }
 
 
-export { userLogin, userRegistration, getUserData, updateUserData, getAllUsers, getUserByNameOrId };
+export { userLogin, userRegistration, updateUserData, getAllUsers, getSingleUser };

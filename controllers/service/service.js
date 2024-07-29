@@ -4,7 +4,19 @@ import { Service } from "../../models/services.js";
 const serviceCreate = async (req, res) => {
     try {
         const { serviceAccountingCode, serviceDescription, serviceAmount } = req.body;
-        const newService = new Service({ serviceAccountingCode, serviceDescription, serviceAmount });
+        const companyId = req.companyId || null;
+        const createdBy = req.userName || null;
+        if (!companyId || !createdBy) {
+            return res.status(400).json({ message: 'companyId and createdBy is missing ' })
+        }
+        const serviceModal = {
+            serviceAccountingCode,
+            serviceDescription,
+            serviceAmount,
+            companyId,
+            createdBy,
+        };
+        const newService = new Service(serviceModal);
         const saveService = await newService.save();
         res.status(201).json(saveService);
     } catch (error) {
@@ -16,26 +28,28 @@ const serviceCreate = async (req, res) => {
 const servicesList = async (req, res) => {
     try {
         const services = await Service.find();
-        // Convert Mongoose documents to plain JavaScript objects and replace _id with id field
-        const modifiedServices = services.map(doc => {
-            const obj = doc.toObject();
-            obj.id = obj._id; // Replace _id with id field
-            delete obj._id; // Remove _id field
-            return obj;
-        });
-        res.status(200).json(modifiedServices);
+        res.status(200).json(services);
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-}
-
+};
 
 const serviceUpdate = async (req, res) => {
     try {
         const { id } = req.params;
-        const update = req.body;
-        const result = await Service.findByIdAndUpdate(id, update, { new: true });
+        const { serviceAccountingCode, serviceDescription, serviceAmount } = req.body;
+        const updatedBy = req.userName || null;
+        if (!updatedBy) {
+            return res.status(400).json({ message: 'updatedBy is missing ' })
+        }
+        const serviceModal = {
+            serviceAccountingCode,
+            serviceDescription,
+            serviceAmount,
+            updatedBy,
+        };
+        const result = await Service.findByIdAndUpdate(id, serviceModal, { new: true });
         if (!result) {
             return res.status(404).json({ message: "service not found" })
         }
@@ -44,7 +58,7 @@ const serviceUpdate = async (req, res) => {
         console.log(error);
         res.status(500).json({ message: "Internal server error" })
     }
-}
+};
 
 const getServiceById = async (req, res) => {
     try {
@@ -65,7 +79,7 @@ const getServiceById = async (req, res) => {
         console.log(error);
         res.status(500).json({ message: "Internal server error" });
     }
-}
+};
 
 const serviceDelete = async (req, res) => {
     try {
