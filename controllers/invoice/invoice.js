@@ -169,6 +169,33 @@ const invoiceReportHandler = async (startDateStr, endDateStr, role, username) =>
     const invoices = await BaseInvoice.aggregate([
         {
             $match: matchConditions
+        },
+        {
+            $addFields: {
+                id: '$_id'
+            }
+        },
+        {
+            $unset: '_id'
+        },
+        {
+            $addFields: {
+                servicesList: {
+                    $map: {
+                        input: "$servicesList",
+                        as: "service",
+                        in: {
+                            $mergeObjects: [
+                                "$$service",
+                                { id: "$$service._id" }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $unset: "servicesList._id"
         }
     ]).exec();
 

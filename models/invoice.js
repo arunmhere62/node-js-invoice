@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import '../mongoose-plugin.js';
+
 
 // Define the base schema for all invoices
 const BaseInvoiceSchema = new mongoose.Schema({
