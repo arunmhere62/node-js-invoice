@@ -139,7 +139,8 @@ const invoiceGetAll = async (req, res) => {
     }
 };
 
-const invoiceReportHandler = async (startDateStr, endDateStr) => {
+const invoiceReportHandler = async (startDateStr, endDateStr, role, username) => {
+
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-').map(Number);
         return new Date(Date.UTC(year, month - 1, day));
@@ -150,33 +151,34 @@ const invoiceReportHandler = async (startDateStr, endDateStr) => {
 
     if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
         throw new Error('Invalid date format');
-    }
+    };
 
+    const matchConditions = {
+        invoiceDate: {
+            $gte: parsedStartDate,
+            $lte: parsedEndDate
+        }
+    };
+
+    // Add createdBy filter if the role is 'standarduser'
+    if (role === ROLE.STANDARDUSER) {
+        matchConditions.createdBy = username;
+    }
     // Aggregation pipeline for filtering
     const invoices = await BaseInvoice.aggregate([
         {
-            $match: {
-                invoiceDate: {
-                    $gte: parsedStartDate,
-                    $lte: parsedEndDate
-                }
-            }
+            $match: matchConditions
         }
     ]).exec();
 
     return invoices;
 };
 
-
-
-
-
 const agingReportHandler = async (startDate, endDate) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
     };
-
     const parsedStartDate = parseDate(startDate);
     const parsedEndDate = parseDate(endDate);
 
@@ -267,19 +269,18 @@ const agingReportHandler = async (startDate, endDate) => {
 
 const invoiceAgingReport = async (req, res) => {
     const { startDate, endDate, filter } = req.body;
-
+    const userRole = req.role;
+    const userName = req.userName;
     try {
         let result;
 
         if (filter === 'agingReport') {
             result = await agingReportHandler(startDate, endDate);
         } else if (filter === 'invoiceReport') {
-            result = await invoiceReportHandler(startDate, endDate);
+            result = await invoiceReportHandler(startDate, endDate, userRole, userName);
         } else {
             return res.status(400).json({ message: 'Invalid filter value' });
         }
-
-        console.log('Result:', result);
         res.json(result);
     } catch (error) {
         console.error('Error generating report:', error);
