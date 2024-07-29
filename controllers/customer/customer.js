@@ -8,6 +8,11 @@ const customerCreate = async (req, res) => {
         const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
 
         const createdBy = req.userName || null;
+        const companyId = req.companyId;
+
+        if (!companyId || !createdBy) {
+            return res.status(400).json({ message: 'companyId and createdBy are required' });
+        }
         // await customerValidation.validate(req.body, { abortEarly: false });
         const newCustomer = new Customer({
             createdBy,
@@ -23,6 +28,7 @@ const customerCreate = async (req, res) => {
             state,
             pinCode,
             contactPersons,
+            companyId,
         });
         const savedCustomer = await newCustomer.save();
         res.status(201).json(savedCustomer);

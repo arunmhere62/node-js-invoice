@@ -75,6 +75,11 @@ const CustomerSchema = mongoose.Schema({
         required: false,
         default: null,
     },
+    companyId: {
+        required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'CompanyDetails'
+    },
 });
 
 const Customer = mongoose.model("customer", CustomerSchema);

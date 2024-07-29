@@ -8,6 +8,8 @@ export const ROLE = {
 Object.freeze(ROLE); // Optional: This ensures the enum object is immutable
 
 export const permissions = {
+    // dashboard 
+    DASHBOARD_VIEW: 'dashboardView',
     // company
     COMPANY_CREATE: 'companyCreate',
     COMPANY_EDIT: 'companyEdit',
@@ -68,6 +70,9 @@ export const permissions = {
 
 export const rolePermissions = {
     [ROLE.SUPERADMIN]: [
+        // dashboard permission 
+        permissions.DASHBOARD_VIEW,
+        // company permissions
         permissions.COMPANY_CREATE,
         permissions.COMPANY_EDIT,
         permissions.COMPANY_DELETE,
@@ -75,6 +80,9 @@ export const rolePermissions = {
         permissions.COMPANY_DETAILS_VIEW,
     ],
     [ROLE.ADMIN]: [
+        // dashboard permission 
+        permissions.DASHBOARD_VIEW,
+
         // users
         permissions.USER_CREATE,
         permissions.USER_EDIT,
@@ -127,6 +135,10 @@ export const rolePermissions = {
 
     ],
     [ROLE.APPROVER]: [
+        // dashboard permission 
+        permissions.DASHBOARD_VIEW,
+
+        // user permissions
         permissions.USER_LIST,
         permissions.USER_DETAILS_VIEW,
 
@@ -143,6 +155,9 @@ export const rolePermissions = {
 
     ],
     [ROLE.STANDARDUSER]: [
+        // dashboard permission 
+        permissions.DASHBOARD_VIEW,
+
         // user permissions
         permissions.USER_LIST,
         permissions.USER_DETAILS_VIEW,
