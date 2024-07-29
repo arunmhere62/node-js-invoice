@@ -10,6 +10,6 @@ router.post("/list", checkPermission(permissions.INVOICE_LIST), invoiceGetAll)
 router.post("/delete/:id", checkPermission(permissions.INVOICE_DELETE), invoiceDelete)
 router.post("/update/:id", checkPermission(permissions.INVOICE_EDIT), invoiceUpdate)
 router.post("/get/:id", checkPermission(permissions.INVOICE_DETAILS_VIEW), invoiceGetById)
-router.post("/agingReport", checkPermission(permissions.INVOICE_AGING_REPORT), invoiceAgingReport)
+router.post("/reports", checkPermission(permissions.INVOICE_AGING_REPORT), invoiceAgingReport)
 
 export default router;

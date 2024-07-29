@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { BaseInvoice, OneTimeInvoice, RetainerInvoice } from "../../models/invoice.js";
 import { ROLE } from "../../services/enums.js";
 import moment from "moment";
+
 const invoiceCreate = async (req, res) => {
     try {
         const {
@@ -179,10 +180,11 @@ const agingReportHandler = async (startDate, endDate) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
     };
+
     const parsedStartDate = parseDate(startDate);
     const parsedEndDate = parseDate(endDate);
 
-    return BaseInvoice.aggregate([
+    const invoices = await BaseInvoice.aggregate([
         {
             $match: {
                 invoiceDate: { $gte: parsedStartDate, $lte: parsedEndDate }
@@ -190,6 +192,7 @@ const agingReportHandler = async (startDate, endDate) => {
         },
         {
             $project: {
+                _id: 1,
                 invoiceNumber: 1,
                 customerName: 1,
                 invoiceDate: 1,
@@ -211,15 +214,7 @@ const agingReportHandler = async (startDate, endDate) => {
             }
         },
         {
-            $project: {
-                invoiceNumber: 1,
-                customerName: 1,
-                invoiceDate: 1,
-                dueDate: 1,
-                totalAmount: 1,
-                amountPaid: 1,
-                outstandingAmount: 1,
-                daysOverdue: 1,
+            $addFields: {
                 agingBucket: {
                     $switch: {
                         branches: [
@@ -234,7 +229,32 @@ const agingReportHandler = async (startDate, endDate) => {
         },
         {
             $group: {
-                _id: "$customerName",
+                _id: {
+                    customerName: "$customerName",
+                    invoiceId: "$_id"
+                },
+                invoiceNumber: { $first: "$invoiceNumber" },
+                daysOverdue: { $first: "$daysOverdue" },
+                agingBucket: { $first: "$agingBucket" },
+                totalAmount: { $first: "$totalAmount" },
+                amountPaid: { $first: "$amountPaid" },
+                outstandingAmount: { $first: "$outstandingAmount" }
+            }
+        },
+        {
+            $group: {
+                _id: "$_id.customerName",
+                invoices: {
+                    $push: {
+                        id: "$_id.invoiceId",
+                        invoiceNumber: "$invoiceNumber",
+                        daysOverdue: "$daysOverdue",
+                        agingBucket: "$agingBucket",
+                        totalAmount: "$totalAmount",
+                        amountPaid: "$amountPaid",
+                        outstandingAmount: "$outstandingAmount"
+                    }
+                },
                 days0to30: {
                     $sum: {
                         $cond: [{ $eq: ["$agingBucket", "0-30"] }, 1, 0]
@@ -254,17 +274,28 @@ const agingReportHandler = async (startDate, endDate) => {
             }
         },
         {
+            $unwind: "$invoices"
+        },
+        {
             $project: {
                 _id: 0,
-                id: "$_id",
-                customerName: "$_id",
+                id: "$invoices.id",
+                invoiceNumber: "$invoices.invoiceNumber",
+                daysOverdue: "$invoices.daysOverdue",
+                agingBucket: "$invoices.agingBucket",
+                totalAmount: "$invoices.totalAmount",
+                amountPaid: "$invoices.amountPaid",
+                outstandingAmount: "$invoices.outstandingAmount",
                 days0to30: 1,
                 days30to45: 1,
                 above45: 1,
-                totalAmount: 1
+                customerName: "$_id",
+                totalCustomerAmount: "$totalAmount"
             }
         }
     ]);
+
+    return invoices;
 };
 
 const invoiceAgingReport = async (req, res) => {
