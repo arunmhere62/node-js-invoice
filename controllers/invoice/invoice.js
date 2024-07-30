@@ -122,7 +122,7 @@ const invoiceCreate = async (req, res) => {
 
 const invoiceGetAll = async (req, res) => {
     const userName = req.userName || null;
-    const userRole = req.role || null;
+    const userRole = req.userRole || null;
     try {
         let query = {};
 
@@ -140,7 +140,7 @@ const invoiceGetAll = async (req, res) => {
     }
 };
 
-const invoiceReportHandler = async (startDateStr, endDateStr, role, username) => {
+const invoiceReportHandler = async (startDateStr, endDateStr, userRole, username) => {
 
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-').map(Number);
@@ -162,7 +162,7 @@ const invoiceReportHandler = async (startDateStr, endDateStr, role, username) =>
     };
 
     // Add createdBy filter if the role is 'standarduser'
-    if (role === ROLE.STANDARDUSER) {
+    if (userRole === ROLE.STANDARDUSER) {
         matchConditions.createdBy = username;
     }
     // Aggregation pipeline for filtering
@@ -258,22 +258,11 @@ const agingReportHandler = async (startDate, endDate) => {
             $group: {
                 _id: {
                     customerName: "$customerName",
-                    invoiceId: "$_id"
+                    agingBucket: "$agingBucket"
                 },
-                invoiceNumber: { $first: "$invoiceNumber" },
-                daysOverdue: { $first: "$daysOverdue" },
-                agingBucket: { $first: "$agingBucket" },
-                totalAmount: { $first: "$totalAmount" },
-                amountPaid: { $first: "$amountPaid" },
-                outstandingAmount: { $first: "$outstandingAmount" }
-            }
-        },
-        {
-            $group: {
-                _id: "$_id.customerName",
                 invoices: {
                     $push: {
-                        id: "$_id.invoiceId",
+                        id: "$_id",
                         invoiceNumber: "$invoiceNumber",
                         daysOverdue: "$daysOverdue",
                         agingBucket: "$agingBucket",
@@ -282,23 +271,34 @@ const agingReportHandler = async (startDate, endDate) => {
                         outstandingAmount: "$outstandingAmount"
                     }
                 },
+                count: { $sum: 1 },
+                totalCustomerAmount: { $sum: "$outstandingAmount" }
+            }
+        },
+        {
+            $group: {
+                _id: "$_id.customerName",
+                invoices: { $push: "$invoices" },
+                totalCustomerAmount: { $first: "$totalCustomerAmount" },
                 days0to30: {
                     $sum: {
-                        $cond: [{ $eq: ["$agingBucket", "0-30"] }, 1, 0]
+                        $cond: [{ $eq: ["$_id.agingBucket", "0-30"] }, 1, 0]
                     }
                 },
                 days30to45: {
                     $sum: {
-                        $cond: [{ $eq: ["$agingBucket", "31-45"] }, 1, 0]
+                        $cond: [{ $eq: ["$_id.agingBucket", "31-45"] }, 1, 0]
                     }
                 },
                 above45: {
                     $sum: {
-                        $cond: [{ $eq: ["$agingBucket", "above45"] }, 1, 0]
+                        $cond: [{ $eq: ["$_id.agingBucket", "above45"] }, 1, 0]
                     }
-                },
-                totalAmount: { $sum: "$outstandingAmount" }
+                }
             }
+        },
+        {
+            $unwind: "$invoices"
         },
         {
             $unwind: "$invoices"
@@ -317,7 +317,7 @@ const agingReportHandler = async (startDate, endDate) => {
                 days30to45: 1,
                 above45: 1,
                 customerName: "$_id",
-                totalCustomerAmount: "$totalAmount"
+                totalCustomerAmount: "$totalCustomerAmount"
             }
         }
     ]);
@@ -325,9 +325,10 @@ const agingReportHandler = async (startDate, endDate) => {
     return invoices;
 };
 
+
 const invoiceAgingReport = async (req, res) => {
     const { startDate, endDate, filter } = req.body;
-    const userRole = req.role;
+    const userRole = req.userRole;
     const userName = req.userName;
     try {
         let result;

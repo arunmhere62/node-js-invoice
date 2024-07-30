@@ -2,8 +2,7 @@ import { rolePermissions } from "../enums.js";
 
 export const checkPermission = (requiredPermission) => {
     return (req, res, next) => {
-        const userRole = req.role;
-        console.log("userRole", userRole);
+        const userRole = req.userRole;
         const permissions = rolePermissions[userRole];
 
         if (!permissions || !permissions.includes(requiredPermission)) {

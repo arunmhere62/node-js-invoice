@@ -354,21 +354,21 @@ const filterStandardUserDashboard = async (startDate, endDate, userName) => {
 
 
 const dashboardReports = async (req, res) => {
-    const role = req.role;
+    const userRole = req.userRole;
     const userName = req.userName;
-    console.log("role", role);
+    console.log("userRole", userRole);
     const { startDate, endDate } = req.body;
 
     try {
         let result = null;
 
-        if (role === ROLE.ADMIN) {
+        if (userRole === ROLE.ADMIN) {
             result = await filterAdminDashboard(startDate, endDate);
-        } else if (role === ROLE.APPROVER) {
+        } else if (userRole === ROLE.APPROVER) {
             result = await filterApproverDashboard(startDate, endDate);
-        } else if (role === ROLE.SUPERADMIN) {
+        } else if (userRole === ROLE.SUPERADMIN) {
             result = await filterSuperAdminDashboard(startDate, endDate);
-        } else if (role === ROLE.STANDARDUSER) {
+        } else if (userRole === ROLE.STANDARDUSER) {
             result = await filterStandardUserDashboard(startDate, endDate, userName);
         }
 

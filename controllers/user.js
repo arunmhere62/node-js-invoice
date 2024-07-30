@@ -39,7 +39,7 @@ const userLogin = async (req, res) => {
                 "UserInfo": {
                     "userEmail": foundUser.userEmail,
                     "userName": foundUser.userName,
-                    "role": foundUser.role,
+                    "userRole": foundUser.userRole,
                     "companyName": companyDetails ? companyDetails.companyName : null,
                     "companyId": companyDetails ? companyDetails.id : null,
                 }
@@ -67,7 +67,7 @@ const userLogin = async (req, res) => {
                 {
                     "userEmail": foundUser.userEmail,
                     "userName": foundUser.userName,
-                    "role": foundUser.role
+                    "userRole": foundUser.userRole
                 },
                 "secret-key",
                 { expiresIn: '30days' }
@@ -83,12 +83,12 @@ const userLogin = async (req, res) => {
             refresh: refreshToken,
             userEmail: foundUser.userEmail,
             userName: foundUser.userName,
-            userRole: foundUser.role,
+            userRole: foundUser.userRole,
             userDetails: {
                 register: {
                     userEmail: foundUser.userEmail,
                     userName: foundUser.userName,
-                    userRole: foundUser.role,
+                    userRole: foundUser.userRole,
                     userMobile: foundUser.userMobile,
                     description: foundUser.description
                 },
@@ -118,7 +118,7 @@ const userRegistration = async (req, res) => {
         password,
         userMobile,
         description,
-        role,
+        userRole,
         companyName,
         companyEmail,
         companyPhone,
@@ -130,13 +130,13 @@ const userRegistration = async (req, res) => {
         companyRegNumber
     } = req.body;
 
-    const tokenRoles = req.role; // Extract roles from the request object
+    const tokenRoles = req.userRole; // Extract roles from the request object
     const companyIdFromToken = req.companyId; // Extract company ID from the token
 
     // Check if the role is valid
     const validRoles = [ROLE.ADMIN, ROLE.SUPERADMIN, ROLE.APPROVER, ROLE.STANDARDUSER];
-    if (!validRoles.includes(role)) {
-        return res.status(400).json({ message: 'Invalid role provided.' });
+    if (!validRoles.includes(userRole)) {
+        return res.status(400).json({ message: 'Invalid userRole provided.' });
     }
 
     const session = await mongoose.startSession();
@@ -144,26 +144,34 @@ const userRegistration = async (req, res) => {
 
     try {
         // Check if user email already exists
-        const existingUser = await UserLogin.findOne({ userEmail }).exec();
+        const existingUser = await UserLogin.findOne({ userEmail });
         if (existingUser) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(409).json({ message: 'User with this email already exists.' });
         }
 
-        if (role === ROLE.SUPERADMIN) {
+        if (userRole === ROLE.SUPERADMIN) {
             // Validate company details for SUPERADMIN
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({ message: 'All company details are required for SUPERADMIN role.' });
             }
 
             // Check if a SUPERADMIN already exists
-            const superAdminExists = await UserLogin.findOne({ role: ROLE.SUPERADMIN }).exec();
+            const superAdminExists = await UserLogin.findOne({ userRole: ROLE.SUPERADMIN });
             if (superAdminExists) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(409).json({ message: 'A SUPERADMIN already exists.' });
             }
 
             // Check if the company email already exists
-            const existingCompany = await CompanyDetails.findOne({ companyEmail }).exec();
+            const existingCompany = await CompanyDetails.findOne({ companyEmail });
             if (existingCompany) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(409).json({ message: `A company with the email "${companyEmail}" already exists.` });
             }
 
@@ -189,7 +197,7 @@ const userRegistration = async (req, res) => {
                 userEmail,
                 userName,
                 password: hashedPassword,
-                role,
+                userRole,
                 userMobile,
                 description,
                 companyId: companyDetails._id
@@ -204,25 +212,33 @@ const userRegistration = async (req, res) => {
             console.log('New SUPERADMIN user created:', newUser);
 
             return res.status(201).json({ success: `New SUPERADMIN user with email ${userEmail} created!` });
-        } else if (role === ROLE.ADMIN) {
+        } else if (userRole === ROLE.ADMIN) {
             // Validate token for ADMIN role
             if (!tokenRoles || !tokenRoles.includes(ROLE.ADMIN)) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create users.' });
             }
 
             // Validate input for ADMIN role
-            if (!userEmail || !userName || !password || !role) {
-                return res.status(400).json({ message: 'userEmail, userName, password, and role are required.' });
+            if (!userEmail || !userName || !password || !userRole) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ message: 'userEmail, userName, password, and userRole are required.' });
             }
 
             // Validate company details for ADMIN role
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({ message: 'All company details are required for ADMIN role.' });
             }
 
             // Check if the company email already exists
-            const existingCompany = await CompanyDetails.findOne({ companyEmail }).exec();
+            const existingCompany = await CompanyDetails.findOne({ companyEmail });
             if (existingCompany) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(409).json({ message: `A company with the email "${companyEmail}" already exists.` });
             }
 
@@ -248,7 +264,7 @@ const userRegistration = async (req, res) => {
                 userEmail,
                 userName,
                 password: hashedPassword,
-                role,
+                userRole,
                 userMobile,
                 description,
                 companyId: companyDetails._id
@@ -263,29 +279,39 @@ const userRegistration = async (req, res) => {
             console.log('New ADMIN user created:', newUser);
 
             return res.status(201).json({ success: `New ADMIN user with email ${userEmail} created!` });
-        } else if (role === ROLE.APPROVER || role === ROLE.STANDARDUSER) {
+        } else if (userRole === ROLE.APPROVER || userRole === ROLE.STANDARDUSER) {
             // Validate token for APPROVER and STANDARDUSER roles
             if (!tokenRoles || !tokenRoles.includes(ROLE.ADMIN)) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create users.' });
             }
 
             // Validate input for APPROVER and STANDARDUSER roles
-            if (!userEmail || !userName || !password || !role) {
+            if (!userEmail || !userName || !password || !userRole) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({ message: 'userEmail, userName, password, and role are required.' });
             }
 
             // Ensure company details are not provided for APPROVER and STANDARDUSER
             if (companyName || companyEmail || companyPhone || companyCountry || companyState || companyAddress || companyWebsite || companyTaxNumber || companyRegNumber) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({ message: 'Company details should not be provided for APPROVER and STANDARDUSER roles.' });
             }
 
             // Fetch the company details using the company ID from the token
             if (!companyIdFromToken) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(400).json({ message: 'Company ID is required in token.' });
             }
 
-            const companyDetails = await CompanyDetails.findById(companyIdFromToken).exec();
+            const companyDetails = await CompanyDetails.findById(companyIdFromToken);
             if (!companyDetails) {
+                await session.abortTransaction();
+                session.endSession();
                 return res.status(500).json({ message: "Company details not found." });
             }
 
@@ -295,7 +321,7 @@ const userRegistration = async (req, res) => {
                 userEmail,
                 userName,
                 password: hashedPassword,
-                role,
+                userRole,
                 userMobile,
                 description,
                 companyId: companyIdFromToken
@@ -322,6 +348,7 @@ const userRegistration = async (req, res) => {
     }
 };
 
+
 // ! ----------- to update all users ------------
 const updateUserData = async (req, res) => {
     try {
@@ -341,14 +368,14 @@ const updateUserData = async (req, res) => {
 
 // ! get users list
 const getAllUsers = async (req, res) => {
-    const role = req.role;
+    const userRole = req.userRole;
     const companyId = req.companyId;
     try {
         let matchCriteria;
 
-        if (role === ROLE.SUPERADMIN) {
+        if (userRole === ROLE.SUPERADMIN) {
             matchCriteria = { role: 'admin' };
-        } else if (role === ROLE.ADMIN) {
+        } else if (userRole === ROLE.ADMIN) {
             matchCriteria = { companyId: new mongoose.Types.ObjectId(companyId) };
         } else {
             return res.status(403).json({ message: 'Access denied' });
@@ -360,7 +387,7 @@ const getAllUsers = async (req, res) => {
                 $project: {
                     id: "$_id",
                     userName: 1,
-                    userRole: "$role",
+                    userRole: "$userRole",
                     userEmail: 1,
                     password: 1,
                     _id: 0

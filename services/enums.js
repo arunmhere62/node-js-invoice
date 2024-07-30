@@ -66,6 +66,9 @@ export const permissions = {
     INVOICE_LIST: 'invoiceList',
     INVOICE_DETAILS_VIEW: 'invoiceView',
     INVOICE_AGING_REPORT: 'invoiceAgingReport',
+
+
+
 };
 
 export const rolePermissions = {
@@ -78,6 +81,8 @@ export const rolePermissions = {
         permissions.COMPANY_DELETE,
         permissions.COMPANY_LIST,
         permissions.COMPANY_DETAILS_VIEW,
+        // users
+        permissions.USER_CREATE,
     ],
     [ROLE.ADMIN]: [
         // dashboard permission 
