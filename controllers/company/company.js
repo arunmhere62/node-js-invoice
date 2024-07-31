@@ -1,5 +1,6 @@
 import { CompanyDetails } from "../../models/company/company.js";
 import { UserLogin } from "../../models/user.js";
+import bcrypt from 'bcrypt';
 
 const companiesList = async (req, res) => {
     const companyName = req.companyName;
@@ -12,8 +13,8 @@ const companiesList = async (req, res) => {
             const admin = await UserLogin.findOne({ companyId: company._id, userRole: 'ADMIN' })
                 .select('-refreshToken');
             return {
-                company,
-                admin
+                companyDetails: company,
+                adminDetails: admin,
             };
         }));
 
@@ -26,18 +27,18 @@ const companiesList = async (req, res) => {
 const getSingleCompany = async (req, res) => {
     try {
         // Step 1: Fetch the company details by ID
-        const company = await CompanyDetails.findById(req.params.id);
-        if (!company) {
+        const companyDetails = await CompanyDetails.findById(req.params.id);
+        if (!companyDetails) {
             return res.status(404).json({ message: 'Company not found' });
         }
 
         // Step 2: Fetch the admin details for the company and exclude the refreshToken field
-        const admin = await UserLogin.findOne({ companyId: company._id, userRole: 'ADMIN' }).select('-refreshToken');
+        const adminDetails = await UserLogin.findOne({ companyId: companyDetails._id, userRole: 'ADMIN' }).select('-refreshToken');
 
         // Combine the company and admin details
         const companyWithAdmin = {
-            company,
-            admin
+            companyDetails: companyDetails,
+            adminDetails: adminDetails
         };
 
         res.status(200).json(companyWithAdmin);
@@ -67,11 +68,40 @@ const deleteCompany = async (req, res) => {
 };
 
 
+
 const updateCompany = async (req, res) => {
     try {
-        const company = await CompanyDetails.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (company) {
-            res.status(200).json(company);
+        // Extract company and admin details from request body
+        const { companyDetails, adminDetails } = req.body;
+
+        console.log("companyDetails", companyDetails);
+        console.log("adminDetails", adminDetails);
+        // Step 1: Update the company details
+        const updatedCompany = await CompanyDetails.findByIdAndUpdate(req.params.id, companyDetails, { new: true });
+
+        if (updatedCompany) {
+            // Step 2: Update the UserLogin details if provided
+            let updatedAdmin;
+            if (adminDetails) {
+                updatedAdmin = await UserLogin.findOneAndUpdate(
+                    { companyId: updatedCompany._id, userRole: 'ADMIN' },
+                    adminDetails,
+                    { new: true }
+                ).select('-refreshToken');
+            } else {
+                // Fetch the admin details if not updating
+                updatedAdmin = await UserLogin.findOne({ companyId: updatedCompany._id, userRole: 'ADMIN' })
+                    .select('-refreshToken');
+            }
+
+            // Step 3: Construct the response object including the company and its admin
+            const companyWithAdmin = {
+                companyDetails: updatedCompany,
+                adminDetails: updatedAdmin
+            };
+
+            // Step 4: Send the response
+            res.status(200).json(companyWithAdmin);
         } else {
             res.status(404).json({ message: 'Company not found' });
         }

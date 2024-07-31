@@ -83,6 +83,10 @@ export const rolePermissions = {
         permissions.COMPANY_DETAILS_VIEW,
         // users
         permissions.USER_CREATE,
+        permissions.USER_EDIT,
+        permissions.USER_DELETE,
+        permissions.USER_LIST,
+        permissions.USER_DETAILS_VIEW,
     ],
     [ROLE.ADMIN]: [
         // dashboard permission 

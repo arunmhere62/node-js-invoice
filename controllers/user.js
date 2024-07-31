@@ -3,7 +3,6 @@ import { UserLogin } from "../models/user.js";
 import jwt from "jsonwebtoken";
 import crypto from 'crypto';
 import bcrypt from "bcrypt";
-
 import { CompanyDetails } from "../models/company/company.js";
 import { ROLE } from "../services/enums.js";
 
@@ -111,6 +110,7 @@ const userLogin = async (req, res) => {
     }
 };
 
+// ! --------- registration -----------
 const userRegistration = async (req, res) => {
     const {
         userEmail,
@@ -151,7 +151,15 @@ const userRegistration = async (req, res) => {
             return res.status(409).json({ message: 'User with this email already exists.' });
         }
 
-        if (userRole === ROLE.SUPERADMIN) {
+        // Check if the requesting user is a SUPERADMIN
+        if (tokenRoles.includes(ROLE.SUPERADMIN)) {
+            // SUPERADMIN should not be allowed to create APPROVER or STANDARDUSER roles
+            if (userRole === ROLE.APPROVER || userRole === ROLE.STANDARDUSER) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(403).json({ message: 'SUPERADMIN cannot create APPROVER or STANDARDUSER roles.' });
+            }
+
             // Validate company details for SUPERADMIN
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
                 await session.abortTransaction();
@@ -348,77 +356,204 @@ const userRegistration = async (req, res) => {
     }
 };
 
-
-// ! ----------- to update all users ------------
+// ! ----------- update users ------------
 const updateUserData = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const update = req.body;
-        const result = await UserLogin.findByIdAndUpdate(id, update, { new: true });
-        if (!result) {
-            return res.status(404).json({ message: "user not found" })
-        }
-        res.json(result);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "internal server error" })
-    }
-};
-
-
-// ! get users list
-const getAllUsers = async (req, res) => {
     const userRole = req.userRole;
-    const companyId = req.companyId;
+    console.log("userRole", userRole);
+
     try {
-        let matchCriteria;
+        // Extract company and admin/user details from request body
+        const { companyDetails, adminDetails, userDetails } = req.body;
 
-        if (userRole === ROLE.SUPERADMIN) {
-            matchCriteria = { role: 'admin' };
-        } else if (userRole === ROLE.ADMIN) {
-            matchCriteria = { companyId: new mongoose.Types.ObjectId(companyId) };
-        } else {
-            return res.status(403).json({ message: 'Access denied' });
-        }
+        if (userRole === 'SUPERADMIN') {
+            // Step 1: Update the company details
+            const updatedCompany = await CompanyDetails.findByIdAndUpdate(req.params.id, companyDetails, { new: true });
 
-        const users = await UserLogin.aggregate([
-            { $match: matchCriteria },
-            {
-                $project: {
-                    id: "$_id",
-                    userName: 1,
-                    userRole: "$userRole",
-                    userEmail: 1,
-                    password: 1,
-                    _id: 0
+            if (updatedCompany) {
+                // Step 2: Update the UserLogin details if adminDetails are provided
+                let updatedAdmin;
+                if (adminDetails) {
+                    updatedAdmin = await UserLogin.findOneAndUpdate(
+                        { companyId: updatedCompany._id, userRole: 'ADMIN' },
+                        adminDetails,
+                        { new: true }
+                    ).select('-refreshToken');
+                } else {
+                    // Fetch the admin details if not updating
+                    updatedAdmin = await UserLogin.findOne({ companyId: updatedCompany._id, userRole: 'ADMIN' })
+                        .select('-refreshToken');
                 }
+
+                // Step 3: Construct the response object including the company and its admin
+                const companyWithAdmin = {
+                    companyDetails: updatedCompany,
+                    adminDetails: updatedAdmin
+                };
+
+                // Step 4: Send the response
+                res.status(200).json(companyWithAdmin);
+            } else {
+                res.status(404).json({ message: 'Company not found' });
             }
-        ]);
+        } else if (userRole === 'ADMIN') {
+            // Destructure userDetails and exclude the password field
+            const { password, ...sanitizedUserDetails } = userDetails;
 
-        if (!users || users.length === 0) {
-            return res.status(404).json({ message: 'Users not found' });
+            // Only update user details for APPROVER or STANDARDUSER
+            const updatedUser = await UserLogin.findOneAndUpdate(
+                { _id: req.params.id, userRole: { $in: ['APPROVER', 'STANDARDUSER'] } },
+                sanitizedUserDetails,
+                { new: true }
+            ).select('-refreshToken');
+
+            if (updatedUser) {
+                // Send the updated user details
+                res.status(200).json({ userDetails: updatedUser });
+            } else {
+                res.status(404).json({ message: 'User not found or unauthorized to update' });
+            }
+        } else {
+            res.status(403).json({ message: 'Unauthorized to update details.' });
         }
-
-        res.json(users);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: 'Internal server error' });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
     }
 };
 
-const getSingleUser = async (req, res) => {
+// ! ------------- users list -------------------
+const getAllCompaniesWithAdmins = async () => {
     try {
-        const { id } = req.params;
-        const user = await UserLogin.findById(id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        res.json(user);
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "Internal Server Error" })
+        // Fetch all companies except 'superadminCorp'
+        const companies = await CompanyDetails.find({ companyName: { $ne: 'superadminCorp' } });
+
+        // Fetch admins for each company and exclude the refreshToken and password fields
+        const companiesWithAdmins = await Promise.all(companies.map(async (company) => {
+            const admin = await UserLogin.findOne({ companyId: company._id, userRole: 'ADMIN' })
+                .select('-refreshToken -password'); // Exclude both refreshToken and password fields
+
+            return {
+                companyDetails: company,
+                adminDetails: admin,
+            };
+        }));
+
+        return companiesWithAdmins;
+    } catch (err) {
+        throw new Error(err.message);
     }
-}
+};
+
+const getCompanyUsers = async (companyId) => {
+    try {
+        // Fetch users for the specific company, excluding passwords
+        const users = await UserLogin.find({ companyId, userRole: { $in: ['APPROVER', 'STANDARDUSER'] } })
+            .select('-password -refreshToken'); // Exclude passwords and refresh tokens
+
+        return users;
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
+const getAllUsers = async (req, res) => {
+    const userRole = req.userRole; // Extract role from the request
+    const companyId = req.companyId; // Extract companyId from the request, if applicable
+
+    try {
+        if (userRole === ROLE.SUPERADMIN) {
+            const companiesWithAdmins = await getAllCompaniesWithAdmins();
+            res.status(200).json(companiesWithAdmins);
+        } else if (userRole === ROLE.ADMIN) {
+            if (!companyId) {
+                return res.status(400).json({ message: 'Company ID is required for ADMIN role.' });
+            }
+            const companyUsers = await getCompanyUsers(companyId);
+            res.status(200).json(companyUsers);
+        } else {
+            res.status(403).json({ message: 'Access denied' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// ! ------------- get single user ------------
+const getSingleUser = async (req, res) => {
+    const userRole = req.userRole; // Extract the user's role from the request
+    const userId = req.params.id; // Extract the user ID from the request parameters
+
+    try {
+        if (userRole === ROLE.SUPERADMIN) {
+            // Fetch the SUPERADMIN user and their associated company details
+            const adminDetails = await UserLogin.findById(userId).select('-refreshToken -password');
+            if (!adminDetails) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            const companyDetails = await CompanyDetails.findById(adminDetails.companyId);
+            if (!companyDetails) {
+                return res.status(404).json({ message: 'Company not found' });
+            }
+
+            const response = {
+                adminDetails,
+                companyDetails
+            };
+
+            res.status(200).json(response);
+        } else if (userRole === ROLE.ADMIN) {
+            // Fetch the ADMIN user's details
+            const userDetails = await UserLogin.findById(userId).select('-refreshToken -password');
+            if (!userDetails) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            res.status(200).json(userDetails);
+        } else {
+            res.status(403).json({ message: 'Access denied' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
 
 
-export { userLogin, userRegistration, updateUserData, getAllUsers, getSingleUser };
+const deleteUser = async (req, res) => {
+    const userRole = req.userRole; // Extract the user's role from the request
+    const userId = req.params.id; // Extract the user ID from the request parameters
+
+    try {
+        if (userRole === ROLE.SUPERADMIN) {
+            // Delete the SUPERADMIN user and their associated company details
+            const user = await UserLogin.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            const companyId = user.companyId;
+            await UserLogin.deleteOne({ _id: userId });
+            await CompanyDetails.deleteOne({ _id: companyId });
+
+            res.status(200).json({ message: 'SUPERADMIN user and associated company deleted successfully' });
+        } else if (userRole === ROLE.ADMIN) {
+            // Delete the ADMIN user details
+            const user = await UserLogin.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            await UserLogin.deleteOne({ _id: userId });
+
+            res.status(200).json({ message: 'ADMIN user deleted successfully' });
+        } else {
+            res.status(403).json({ message: 'Access denied' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+export { userLogin, userRegistration, updateUserData, getAllUsers, getSingleUser, deleteUser };

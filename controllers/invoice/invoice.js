@@ -325,7 +325,6 @@ const agingReportHandler = async (startDate, endDate) => {
     return invoices;
 };
 
-
 const invoiceAgingReport = async (req, res) => {
     const { startDate, endDate, filter } = req.body;
     const userRole = req.userRole;
