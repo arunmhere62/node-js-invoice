@@ -131,6 +131,7 @@ const userRegistration = async (req, res) => {
     } = req.body;
 
     const tokenRoles = req.userRole; // Extract roles from the request object
+    console.log("tokenRoles", tokenRoles);
     const companyIdFromToken = req.companyId; // Extract company ID from the token
 
     // Check if the role is valid
@@ -151,23 +152,19 @@ const userRegistration = async (req, res) => {
             return res.status(409).json({ message: 'User with this email already exists.' });
         }
 
-        // Check if the requesting user is a SUPERADMIN
-        if (tokenRoles.includes(ROLE.SUPERADMIN)) {
-            // SUPERADMIN should not be allowed to create APPROVER or STANDARDUSER roles
-            if (userRole === ROLE.APPROVER || userRole === ROLE.STANDARDUSER) {
+        if (userRole === ROLE.SUPERADMIN) {
+            if (!tokenRoles.includes(ROLE.SUPERADMIN)) {
                 await session.abortTransaction();
                 session.endSession();
-                return res.status(403).json({ message: 'SUPERADMIN cannot create APPROVER or STANDARDUSER roles.' });
+                return res.status(403).json({ message: 'Unauthorized. Only SUPERADMIN can create SUPERADMIN users.' });
             }
 
-            // Validate company details for SUPERADMIN
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'All company details are required for SUPERADMIN role.' });
             }
 
-            // Check if a SUPERADMIN already exists
             const superAdminExists = await UserLogin.findOne({ userRole: ROLE.SUPERADMIN });
             if (superAdminExists) {
                 await session.abortTransaction();
@@ -175,7 +172,6 @@ const userRegistration = async (req, res) => {
                 return res.status(409).json({ message: 'A SUPERADMIN already exists.' });
             }
 
-            // Check if the company email already exists
             const existingCompany = await CompanyDetails.findOne({ companyEmail });
             if (existingCompany) {
                 await session.abortTransaction();
@@ -183,8 +179,7 @@ const userRegistration = async (req, res) => {
                 return res.status(409).json({ message: `A company with the email "${companyEmail}" already exists.` });
             }
 
-            // Create company details for SUPERADMIN
-            const companyDetails = new CompanyDetails({
+            const companyDetailsDoc = new CompanyDetails({
                 companyName,
                 companyEmail,
                 companyPhone,
@@ -196,10 +191,8 @@ const userRegistration = async (req, res) => {
                 companyRegNumber
             });
 
-            // Save the company details in a transaction
-            await companyDetails.save({ session });
+            await companyDetailsDoc.save({ session });
 
-            // Create and store the new SUPERADMIN user
             const hashedPassword = await bcrypt.hash(password, 10);
             const newUser = new UserLogin({
                 userEmail,
@@ -208,10 +201,9 @@ const userRegistration = async (req, res) => {
                 userRole,
                 userMobile,
                 description,
-                companyId: companyDetails._id
+                companyId: companyDetailsDoc._id
             });
 
-            // Save the user in a transaction
             await newUser.save({ session });
 
             await session.commitTransaction();
@@ -221,28 +213,24 @@ const userRegistration = async (req, res) => {
 
             return res.status(201).json({ success: `New SUPERADMIN user with email ${userEmail} created!` });
         } else if (userRole === ROLE.ADMIN) {
-            // Validate token for ADMIN role
-            if (!tokenRoles || !tokenRoles.includes(ROLE.ADMIN)) {
+            if (!tokenRoles.includes(ROLE.SUPERADMIN)) {
                 await session.abortTransaction();
                 session.endSession();
-                return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create users.' });
+                return res.status(403).json({ message: 'Unauthorized. Only SUPERADMIN can create ADMIN users.' });
             }
 
-            // Validate input for ADMIN role
             if (!userEmail || !userName || !password || !userRole) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'userEmail, userName, password, and userRole are required.' });
             }
 
-            // Validate company details for ADMIN role
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'All company details are required for ADMIN role.' });
             }
 
-            // Check if the company email already exists
             const existingCompany = await CompanyDetails.findOne({ companyEmail });
             if (existingCompany) {
                 await session.abortTransaction();
@@ -250,8 +238,7 @@ const userRegistration = async (req, res) => {
                 return res.status(409).json({ message: `A company with the email "${companyEmail}" already exists.` });
             }
 
-            // Create or find the company details
-            const companyDetails = new CompanyDetails({
+            const companyDetailsDoc = new CompanyDetails({
                 companyName,
                 companyEmail,
                 companyPhone,
@@ -263,10 +250,8 @@ const userRegistration = async (req, res) => {
                 companyRegNumber
             });
 
-            // Save the company details in a transaction
-            await companyDetails.save({ session });
+            await companyDetailsDoc.save({ session });
 
-            // Create and store the new ADMIN user
             const hashedPassword = await bcrypt.hash(password, 10);
             const newUser = new UserLogin({
                 userEmail,
@@ -275,10 +260,9 @@ const userRegistration = async (req, res) => {
                 userRole,
                 userMobile,
                 description,
-                companyId: companyDetails._id
+                companyId: companyDetailsDoc._id
             });
 
-            // Save the user in a transaction
             await newUser.save({ session });
 
             await session.commitTransaction();
@@ -288,28 +272,24 @@ const userRegistration = async (req, res) => {
 
             return res.status(201).json({ success: `New ADMIN user with email ${userEmail} created!` });
         } else if (userRole === ROLE.APPROVER || userRole === ROLE.STANDARDUSER) {
-            // Validate token for APPROVER and STANDARDUSER roles
-            if (!tokenRoles || !tokenRoles.includes(ROLE.ADMIN)) {
+            if (!tokenRoles.includes(ROLE.ADMIN)) {
                 await session.abortTransaction();
                 session.endSession();
-                return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create users.' });
+                return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create APPROVER or STANDARDUSER users.' });
             }
 
-            // Validate input for APPROVER and STANDARDUSER roles
             if (!userEmail || !userName || !password || !userRole) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'userEmail, userName, password, and role are required.' });
             }
 
-            // Ensure company details are not provided for APPROVER and STANDARDUSER
             if (companyName || companyEmail || companyPhone || companyCountry || companyState || companyAddress || companyWebsite || companyTaxNumber || companyRegNumber) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'Company details should not be provided for APPROVER and STANDARDUSER roles.' });
             }
 
-            // Fetch the company details using the company ID from the token
             if (!companyIdFromToken) {
                 await session.abortTransaction();
                 session.endSession();
@@ -323,7 +303,6 @@ const userRegistration = async (req, res) => {
                 return res.status(500).json({ message: "Company details not found." });
             }
 
-            // Create and store the new APPROVER or STANDARDUSER
             const hashedPassword = await bcrypt.hash(password, 10);
             const newUser = new UserLogin({
                 userEmail,
@@ -335,7 +314,6 @@ const userRegistration = async (req, res) => {
                 companyId: companyIdFromToken
             });
 
-            // Save the user in a transaction
             await newUser.save({ session });
 
             await session.commitTransaction();
@@ -348,13 +326,13 @@ const userRegistration = async (req, res) => {
         session.endSession();
 
         if (err.code === 11000) {
-            // Handle duplicate key error
             return res.status(409).json({ message: 'Duplicate key error. A record with this value already exists.' });
         }
         console.error('Error creating user:', err);
         return res.status(500).json({ message: 'Internal server error.' });
     }
 };
+
 
 
 // ! ----------- update users ------------
