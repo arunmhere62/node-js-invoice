@@ -356,10 +356,10 @@ const userRegistration = async (req, res) => {
     }
 };
 
+
 // ! ----------- update users ------------
 const updateUserData = async (req, res) => {
     const userRole = req.userRole;
-    console.log("userRole", userRole);
 
     try {
         // Extract company and admin/user details from request body
@@ -397,7 +397,7 @@ const updateUserData = async (req, res) => {
             }
         } else if (userRole === 'ADMIN') {
             // Destructure userDetails and exclude the password field
-            const { password, ...sanitizedUserDetails } = userDetails;
+            const { ...sanitizedUserDetails } = userDetails;
 
             // Only update user details for APPROVER or STANDARDUSER
             const updatedUser = await UserLogin.findOneAndUpdate(
