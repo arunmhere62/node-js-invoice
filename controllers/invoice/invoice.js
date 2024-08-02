@@ -64,9 +64,6 @@ const invoiceCreate = async (req, res) => {
         // Check if dates are valid
         const isValidDate = (date) => date instanceof Date && !isNaN(date.getTime());
         // Continue with your logic for creating or filtering invoices
-        console.log('Parsed Start Date:', parsedStartDate);
-        console.log('Parsed Due Date:', parsedDueDate);
-        console.log('Parsed Invoice Date:', parsedInvoiceDate);
 
         if (!isValidDate(parsedStartDate) ||
             !isValidDate(parsedDueDate) ||

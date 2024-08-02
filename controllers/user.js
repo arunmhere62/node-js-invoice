@@ -131,7 +131,6 @@ const userRegistration = async (req, res) => {
     } = req.body;
 
     const tokenRoles = req.userRole; // Extract roles from the request object
-    console.log("tokenRoles", tokenRoles);
     const companyIdFromToken = req.companyId; // Extract company ID from the token
 
     // Check if the role is valid
@@ -209,7 +208,6 @@ const userRegistration = async (req, res) => {
             await session.commitTransaction();
             session.endSession();
 
-            console.log('New SUPERADMIN user created:', newUser);
 
             return res.status(201).json({ success: `New SUPERADMIN user with email ${userEmail} created!` });
         } else if (userRole === ROLE.ADMIN) {
@@ -268,7 +266,6 @@ const userRegistration = async (req, res) => {
             await session.commitTransaction();
             session.endSession();
 
-            console.log('New ADMIN user created:', newUser);
 
             return res.status(201).json({ success: `New ADMIN user with email ${userEmail} created!` });
         } else if (userRole === ROLE.APPROVER || userRole === ROLE.STANDARDUSER) {

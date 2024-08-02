@@ -127,6 +127,7 @@ const filterApproverDashboard = async (startDate, endDate) => {
         return new Date(Date.UTC(year, month - 1, day));
     };
 
+    console.log("Parsing dates...");
     const parsedStartDate = parseDate(startDate);
     const parsedEndDate = parseDate(endDate);
 
@@ -141,60 +142,64 @@ const filterApproverDashboard = async (startDate, endDate) => {
         }
     };
 
-    // Fetching invoices for the given date range
-    const invoices = await BaseInvoice.find({ ...dateMatch, invoiceStatus: "PENDING" })
-        .select({
-            _id: 0,
-            id: "$_id",
-            invoiceType: 1,
-            invoiceNumber: 1,
-            customerName: 1,
-            gstType: 1,
-            gstPercentage: 1,
-            invoiceDate: 1,
-            paymentTerms: 1,
-            startDate: 1,
-            dueDate: 1,
-            invoiceStatus: 1,
-            lastModified: 1,
-            gstInNumber: 1,
-            retainerFee: 1,
-            notes: 1,
-            termsAndConditions: 1,
-            servicesList: {
-                $map: {
-                    input: "$servicesList",
-                    as: "service",
-                    in: {
-                        id: "$$service._id",
-                        serviceAccountingCode: "$$service.serviceAccountingCode",
-                        serviceDescription: "$$service.serviceDescription",
-                        serviceQty: "$$service.serviceQty",
-                        serviceAmount: "$$service.serviceAmount",
-                        serviceTotalAmount: "$$service.serviceTotalAmount"
+    try {
+        const invoices = await BaseInvoice.find({ ...dateMatch, invoiceStatus: "PENDING" })
+            .select({
+                _id: 1, // Ensure _id is selected for transformation
+                id: "$_id",
+                invoiceType: 1,
+                invoiceNumber: 1,
+                customerName: 1,
+                gstType: 1,
+                gstPercentage: 1,
+                invoiceDate: 1,
+                paymentTerms: 1,
+                startDate: 1,
+                dueDate: 1,
+                invoiceStatus: 1,
+                lastModified: 1,
+                gstInNumber: 1,
+                retainerFee: 1,
+                notes: 1,
+                termsAndConditions: 1,
+                servicesList: {
+                    $map: {
+                        input: "$servicesList",
+                        as: "service",
+                        in: {
+                            id: "$$service._id",
+                            serviceAccountingCode: "$$service.serviceAccountingCode",
+                            serviceDescription: "$$service.serviceDescription",
+                            serviceQty: "$$service.serviceQty",
+                            serviceAmount: "$$service.serviceAmount",
+                            serviceTotalAmount: "$$service.serviceTotalAmount"
+                        }
                     }
-                }
-            },
-            taxAmount: 1,
-            discountPercentage: 1,
-            totalAmount: 1,
-            createdBy: 1,
-            updatedBy: 1,
-            companyName: 1,
-            invoiceReason: 1,
-            mailTo: 1
-        })
-        .exec();
+                },
+                taxAmount: 1,
+                discountPercentage: 1,
+                totalAmount: 1,
+                createdBy: 1,
+                updatedBy: 1,
+                companyName: 1,
+                invoiceReason: 1,
+                mailTo: 1
+            })
+            .exec();
 
-    // Creating the result object
-    const result = {
-        totalInvoices: invoices.length,
-        pendingInvoices: invoices.length,
-        approvedInvoices: 0,  // Assuming you only want pending invoices here
-        pendingInvoicesList: invoices
-    };
+        // Creating the result object
+        const result = {
+            totalInvoices: invoices.length,
+            pendingInvoices: invoices.length,
+            approvedInvoices: 0,  // Assuming you only want pending invoices here
+            pendingInvoicesList: invoices
+        };
 
-    return result;
+        return result;
+    } catch (error) {
+        console.error("Error fetching invoices:", error.message);
+        throw new Error('Error fetching invoices from MongoDB');
+    }
 };
 
 const filterSuperAdminDashboard = async (startDate, endDate) => {
@@ -352,12 +357,12 @@ const filterStandardUserDashboard = async (startDate, endDate, userName) => {
     };
 };
 
-
 const dashboardReports = async (req, res) => {
     const userRole = req.userRole;
     const userName = req.userName;
-    console.log("userRole", userRole);
     const { startDate, endDate } = req.body;
+    console.log("userRole", userRole);
+    console.log("userRole", userRole);
 
     try {
         let result = null;

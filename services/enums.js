@@ -162,6 +162,9 @@ export const rolePermissions = {
         permissions.INVOICE_DETAILS_VIEW,
         permissions.INVOICE_AGING_REPORT,
 
+        // customer List 
+        permissions.CUSTOMER_LIST,
+
     ],
     [ROLE.STANDARDUSER]: [
         // dashboard permission 

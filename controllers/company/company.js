@@ -74,8 +74,6 @@ const updateCompany = async (req, res) => {
         // Extract company and admin details from request body
         const { companyDetails, adminDetails } = req.body;
 
-        console.log("companyDetails", companyDetails);
-        console.log("adminDetails", adminDetails);
         // Step 1: Update the company details
         const updatedCompany = await CompanyDetails.findByIdAndUpdate(req.params.id, companyDetails, { new: true });
 
