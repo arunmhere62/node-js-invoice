@@ -11,8 +11,6 @@ const companiesList = async (req, res) => {
 
         const companies = await CompanyModel.find({ companyName: { $ne: companyName } });
 
-        console.log("companies", companies);
-
         // Step 2: Fetch admins for each company and exclude the refreshToken field
         const companiesWithAdmins = await Promise.all(companies.map(async (company) => {
             const admin = await UserLogin.findOne({ companyId: company._id, userRole: 'ADMIN' })

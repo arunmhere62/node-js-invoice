@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 const handleRefreshToken = async (req, res) => {
     const refreshTokenHeader = req.headers['refresh'];
 
-    console.log("refresh", refreshTokenHeader);
 
     if (!refreshTokenHeader) {
         return res.status(401).json({ message: 'Refresh token is required.' });

@@ -122,10 +122,12 @@ const filterAdminDashboard = async (startDate, endDate, InvoiceModel) => {
 };
 
 const filterApproverDashboard = async (startDate, endDate, InvoiceModel) => {
+
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
     };
+
     const parsedStartDate = parseDate(startDate);
     const parsedEndDate = parseDate(endDate);
 
@@ -141,55 +143,62 @@ const filterApproverDashboard = async (startDate, endDate, InvoiceModel) => {
     };
 
     try {
-        const invoices = await InvoiceModel.find({ ...dateMatch, invoiceStatus: "PENDING" })
-            .select({
-                _id: 1,
-                id: "$_id",
-                invoiceType: 1,
-                invoiceNumber: 1,
-                customerName: 1,
-                gstType: 1,
-                gstPercentage: 1,
-                invoiceDate: 1,
-                paymentTerms: 1,
-                startDate: 1,
-                dueDate: 1,
-                invoiceStatus: 1,
-                lastModified: 1,
-                gstInNumber: 1,
-                retainerFee: 1,
-                notes: 1,
-                termsAndConditions: 1,
-                servicesList: {
-                    $map: {
-                        input: "$servicesList",
-                        as: "service",
-                        in: {
-                            id: "$$service._id",
-                            serviceAccountingCode: "$$service.serviceAccountingCode",
-                            serviceDescription: "$$service.serviceDescription",
-                            serviceQty: "$$service.serviceQty",
-                            serviceAmount: "$$service.serviceAmount",
-                            serviceTotalAmount: "$$service.serviceTotalAmount"
+        const invoices = await InvoiceModel.aggregate([
+            { $match: dateMatch },
+            {
+                $project: {
+                    _id: 1,
+                    id: "$_id",
+                    invoiceType: 1,
+                    invoiceNumber: 1,
+                    customerName: 1,
+                    gstType: 1,
+                    gstPercentage: 1,
+                    invoiceDate: 1,
+                    paymentTerms: 1,
+                    startDate: 1,
+                    dueDate: 1,
+                    invoiceStatus: 1,
+                    lastModified: 1,
+                    gstInNumber: 1,
+                    retainerFee: 1,
+                    notes: 1,
+                    termsAndConditions: 1,
+                    servicesList: {
+                        $map: {
+                            input: "$servicesList",
+                            as: "service",
+                            in: {
+                                id: "$$service._id",
+                                serviceAccountingCode: "$$service.serviceAccountingCode",
+                                serviceDescription: "$$service.serviceDescription",
+                                serviceQty: "$$service.serviceQty",
+                                serviceAmount: "$$service.serviceAmount",
+                                serviceTotalAmount: "$$service.serviceTotalAmount"
+                            }
                         }
-                    }
-                },
-                taxAmount: 1,
-                discountPercentage: 1,
-                totalAmount: 1,
-                createdBy: 1,
-                updatedBy: 1,
-                companyName: 1,
-                invoiceReason: 1,
-                mailTo: 1
-            })
-            .exec();
+                    },
+                    taxAmount: 1,
+                    discountPercentage: 1,
+                    totalAmount: 1,
+                    createdBy: 1,
+                    updatedBy: 1,
+                    companyName: 1,
+                    invoiceReason: 1,
+                    mailTo: 1
+                }
+            }
+        ]);
+
+        const pendingInvoices = invoices.filter(invoice => invoice.invoiceStatus === 'PENDING');
+        const approvedInvoices = invoices.filter(invoice => invoice.invoiceStatus === 'APPROVED');
 
         const result = {
             totalInvoices: invoices.length,
-            pendingInvoices: invoices.length,
-            approvedInvoices: 0,
-            pendingInvoicesList: invoices
+            pendingInvoices: pendingInvoices.length,
+            approvedInvoices: approvedInvoices.length,
+            pendingInvoicesList: pendingInvoices,
+            approvedInvoicesList: approvedInvoices
         };
 
         return result;
@@ -199,8 +208,9 @@ const filterApproverDashboard = async (startDate, endDate, InvoiceModel) => {
     }
 };
 
+
+
 const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, CustomersModel, excludedCompanyName) => {
-    console.log("hello super admin");
 
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
@@ -261,7 +271,6 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
 };
 
 const filterStandardUserDashboard = async (startDate, endDate, userName, InvoiceModel) => {
-    console.log("InvoiceModel", InvoiceModel);
 
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
@@ -283,8 +292,6 @@ const filterStandardUserDashboard = async (startDate, endDate, userName, Invoice
             $lte: parsedEndDate
         }
     });
-    console.log("totalInvoices", totalInvoices);
-
 
     // Get pending invoices count
     const pendingInvoices = await InvoiceModel.countDocuments({
@@ -355,7 +362,9 @@ const filterStandardUserDashboard = async (startDate, endDate, userName, Invoice
 const dashboardReports = async (req, res) => {
     const userRole = req.userRole;
     const userName = req.userName;
-    const companyName = req[tokenReqValueEnums.COMPANY_NAME]
+
+    const companyName = req[tokenReqValueEnums.COMPANY_NAME];
+
     const { startDate, endDate } = req.body;
     const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
     const CustomersModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS);
