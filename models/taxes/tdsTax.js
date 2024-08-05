@@ -28,5 +28,6 @@ const TdsTax = mongoose.Schema({
     },
 })
 
-const TdsSchema = mongoose.model("TdsType", TdsTax);
-export { TdsSchema } 
+export const getDynamicTdsTaxModel = (collectionName) => {
+    return mongoose.model(collectionName, TdsTax);
+};

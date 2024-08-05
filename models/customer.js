@@ -82,5 +82,8 @@ const CustomerSchema = mongoose.Schema({
     },
 });
 
-const Customer = mongoose.model("customer", CustomerSchema);
-export { Customer };
+const getDynamicCustomerModel = (collectionName) => {
+    return mongoose.model(collectionName, CustomerSchema);
+};
+
+export { getDynamicCustomerModel };

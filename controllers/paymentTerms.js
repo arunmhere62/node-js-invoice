@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
-import { PaymentTermsSchema } from "../models/paymentTerms.js";
-import { paymentTermsValidation } from "../validations/validations.js";
-import * as Yup from 'yup';
+import { getDynamicModelNameGenerator } from "../services/utils/ModelNameGenerator.js";
+import { CollectionNames } from "../services/enums.js";
 
 const createPaymentTerms = async (req, res) => {
+
     try {
+        const PaymentTermsSchema = getDynamicModelNameGenerator(req, CollectionNames.PAYMENT_TERMS);
         const { termName, totalDays } = req.body;
         const companyId = req.companyId;
         const createdBy = req.userName;
@@ -22,7 +23,9 @@ const createPaymentTerms = async (req, res) => {
 }
 
 const getAllPaymentTerms = async (req, res) => {
+
     try {
+        const PaymentTermsSchema = getDynamicModelNameGenerator(req, CollectionNames.PAYMENT_TERMS);
         const paymentTerms = await PaymentTermsSchema.find();
         res.status(200).json(paymentTerms);
     } catch (error) {
@@ -32,7 +35,9 @@ const getAllPaymentTerms = async (req, res) => {
 };
 
 const getPaymentTermById = async (req, res) => {
+
     try {
+        const PaymentTermsSchema = getDynamicModelNameGenerator(req, CollectionNames.PAYMENT_TERMS);
         const { id } = req.params;
         const paymentTerm = await PaymentTermsSchema.findById(id);
         if (!paymentTerm) {
@@ -46,7 +51,9 @@ const getPaymentTermById = async (req, res) => {
 };
 
 const updatePaymentTermById = async (req, res) => {
+
     try {
+        const PaymentTermsSchema = getDynamicModelNameGenerator(req, CollectionNames.PAYMENT_TERMS);
         const { id } = req.params;
         const updatedBy = req.userName;
         if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -73,6 +80,7 @@ const updatePaymentTermById = async (req, res) => {
 
 const deletePaymentTermById = async (req, res) => {
     try {
+        const PaymentTermsSchema = getDynamicModelNameGenerator(req, CollectionNames.PAYMENT_TERMS);
         const { id } = req.params;
         const deletedPaymentTerm = await PaymentTermsSchema.findByIdAndDelete(id);
         if (!deletedPaymentTerm) {

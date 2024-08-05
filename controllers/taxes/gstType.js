@@ -1,7 +1,9 @@
-import { GstTypeSchema } from "../../models/taxes/gstType.js";
+import { CollectionNames } from '../../services/enums.js';
+import { getDynamicModelNameGenerator } from '../../services/utils/ModelNameGenerator.js';
 
 const createGstType = async (req, res) => {
     try {
+        const GstTypeSchema = getDynamicModelNameGenerator(req, CollectionNames.GST_TYPE);
         const { gstName, gstPercentage } = req.body;
         const companyId = req.companyId || null;
         const createdBy = req.userName || null;
@@ -25,9 +27,9 @@ const createGstType = async (req, res) => {
     }
 };
 
-
 const getGstTypeList = async (req, res) => {
     try {
+        const GstTypeSchema = getDynamicModelNameGenerator(req, CollectionNames.GST_TYPE);
         const gstTypeList = await GstTypeSchema.find();
         res.status(200).json(gstTypeList);
     } catch (error) {
@@ -38,6 +40,7 @@ const getGstTypeList = async (req, res) => {
 
 const getGstTypeById = async (req, res) => {
     try {
+        const GstTypeSchema = getDynamicModelNameGenerator(req, CollectionNames.GST_TYPE);
         const { id } = req.params;
         const gstType = await GstTypeSchema.findById(id);
         res.status(200).json(gstType);
@@ -49,6 +52,7 @@ const getGstTypeById = async (req, res) => {
 
 const updateGstTypeById = async (req, res) => {
     try {
+        const GstTypeSchema = getDynamicModelNameGenerator(req, CollectionNames.GST_TYPE);
         const { id } = req.params;
         const updatedBy = req.userName || null;
         const { gstName, gstPercentage } = req.body;
@@ -70,6 +74,7 @@ const updateGstTypeById = async (req, res) => {
 
 const deleteGstTypeById = async (req, res) => {
     try {
+        const GstTypeSchema = getDynamicModelNameGenerator(req, CollectionNames.GST_TYPE);
         const { id } = req.params;
         const deletedGstType = await GstTypeSchema.findByIdAndDelete(id);
         if (!deletedGstType) {

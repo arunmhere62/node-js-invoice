@@ -28,5 +28,7 @@ const GstType = mongoose.Schema({
     },
 })
 
-const GstTypeSchema = mongoose.model("GstType", GstType)
-export { GstTypeSchema }
+
+export const getDynamicGstTypeModel = (collectionName) => {
+    return mongoose.model(collectionName, GstType);
+};

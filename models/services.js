@@ -30,6 +30,6 @@ const ServiceSchema = mongoose.Schema({
     },
 });
 
-const Service = mongoose.model("service", ServiceSchema);
-export { Service };
-
+export const getDynamicServiceModel = (collectionName) => {
+    return mongoose.model(collectionName, ServiceSchema)
+}

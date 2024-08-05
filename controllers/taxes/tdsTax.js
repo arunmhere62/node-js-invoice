@@ -1,7 +1,10 @@
-import { TdsSchema } from "../../models/taxes/tdsTax.js";
+import { CollectionNames, } from "../../services/enums.js";
+import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
 
 const createTds = async (req, res) => {
+
     try {
+        const TdsTaxModel = getDynamicModelNameGenerator(req, CollectionNames.TDS_TAX);
         const { taxName, taxPercentage } = req.body;
         const companyId = req.companyId;
         const createdBy = req.userName;
@@ -9,18 +12,20 @@ const createTds = async (req, res) => {
         if (!companyId || !createdBy) {
             return res.status(400).json({ message: 'createdBy and companyId is required' });
         }
-        const newData = new TdsSchema({ taxName, taxPercentage, companyId, createdBy })
+        const newData = new TdsTaxModel({ taxName, taxPercentage, companyId, createdBy })
         const savedData = await newData.save();
         res.status(201).json(savedData);
     } catch (error) {
         console.error('Error creating customer:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-}
+};
 
 const getTdsList = async (req, res) => {
+
     try {
-        const tdsList = await TdsSchema.find();
+        const TdsTaxModel = getDynamicModelNameGenerator(req, CollectionNames.TDS_TAX);
+        const tdsList = await TdsTaxModel.find();
         res.status(200).json(tdsList);
     } catch (error) {
         console.error("Error Fetching TDS List:", error);
@@ -29,9 +34,11 @@ const getTdsList = async (req, res) => {
 };
 
 const getTdsById = async (req, res) => {
+
     try {
+        const TdsTaxModel = getDynamicModelNameGenerator(req, CollectionNames.TDS_TAX);
         const { id } = req.params;
-        const tds = await TdsSchema.findById(id);
+        const tds = await TdsTaxModel.findById(id);
         if (!tds) {
             return res.status(404).json({ message: "TDS Not Found" })
         }
@@ -40,17 +47,18 @@ const getTdsById = async (req, res) => {
         console.error("Error Fetching TDS by ID :", error);
         res.status(500).json({ message: "Internal server error" })
     }
-}
+};
 
 const updateTdsById = async (req, res) => {
     try {
+        const TdsTaxModel = getDynamicModelNameGenerator(req, CollectionNames.TDS_TAX);
         const { id } = req.params;
         const updatedBy = req.userName;
         const { taxName, taxPercentage } = req.body;
         if (!updatedBy) {
             return res.status(400).json({ message: 'updatedBy is required' });
         }
-        const updateIds = await TdsSchema.findByIdAndUpdate(id, { updatedBy, taxName, taxPercentage, updatedBy }, { new: true });
+        const updateIds = await TdsTaxModel.findByIdAndUpdate(id, { updatedBy, taxName, taxPercentage, updatedBy }, { new: true });
         if (!updateIds) {
             return res.status(404).json({ message: "TDS not found" })
         }
@@ -59,12 +67,13 @@ const updateTdsById = async (req, res) => {
         console.error("Error updating Tds by id :", error);
         res.status(500).json({ message: "Internal server error" })
     }
-}
+};
 
 const deleteTdsById = async (req, res) => {
     try {
+        const TdsTaxModel = getDynamicModelNameGenerator(req, CollectionNames.TDS_TAX);
         const { id } = req.params;
-        const deletedTds = await TdsSchema.findByIdAndDelete(id);
+        const deletedTds = await TdsTaxModel.findByIdAndDelete(id);
         if (!deletedTds) {
             return res.status(404).json({ message: "Tds not found" })
         }
@@ -73,6 +82,6 @@ const deleteTdsById = async (req, res) => {
         console.error("Error deleting Tds by id", error)
         res.status(500).json({ message: "Internal server error" })
     }
-}
+};
 
 export { createTds, getTdsList, getTdsById, updateTdsById, deleteTdsById }

@@ -1,10 +1,14 @@
 import mongoose from "mongoose";
-import { BaseInvoice, OneTimeInvoice, RetainerInvoice } from "../../models/invoice.js";
-import { ROLE } from "../../services/enums.js";
+import { CollectionNames, ROLE } from "../../services/enums.js";
 import moment from "moment";
+import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
 
 const invoiceCreate = async (req, res) => {
     try {
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+        if (!InvoiceModel) {
+            return res.status(400).json({ message: `Unknown collection type: ${CollectionNames.INVOICE}, issue on backend` });
+        }
         const {
             invoiceType,
             invoiceNumber,
@@ -97,17 +101,6 @@ const invoiceCreate = async (req, res) => {
             invoiceStages
         };
 
-        // Map invoiceType to corresponding model
-        const invoiceTypeMapping = {
-            'Retainer': RetainerInvoice,
-            'Onetime': OneTimeInvoice
-        };
-
-        let InvoiceModel = invoiceTypeMapping[invoiceType];
-        if (!InvoiceModel) {
-            return res.status(400).json({ message: 'Invalid invoice type' });
-        }
-
         // Create new invoice if validation passes
         const newInvoice = await InvoiceModel.create(invoiceData);
         res.status(201).json(newInvoice);
@@ -118,9 +111,11 @@ const invoiceCreate = async (req, res) => {
 };
 
 const invoiceGetAll = async (req, res) => {
-    const userName = req.userName || null;
-    const userRole = req.userRole || null;
     try {
+        const userName = req.userName || null;
+        const userRole = req.userRole || null;
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+
         let query = {};
 
         if (userRole === ROLE.STANDARDUSER) {
@@ -129,7 +124,7 @@ const invoiceGetAll = async (req, res) => {
             query = { invoiceStatus: { $in: ['PENDING', 'APPROVED'] } };
         }
 
-        const modifiedInvoices = await BaseInvoice.find(query);
+        const modifiedInvoices = await InvoiceModel.find(query);
         res.status(200).json(modifiedInvoices);
     } catch (error) {
         console.error('Error fetching invoices:', error);
@@ -137,8 +132,7 @@ const invoiceGetAll = async (req, res) => {
     }
 };
 
-const invoiceReportHandler = async (startDateStr, endDateStr, userRole, username) => {
-
+const invoiceReportHandler = async (startDateStr, endDateStr, userRole, username, InvoiceModel) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-').map(Number);
         return new Date(Date.UTC(year, month - 1, day));
@@ -163,7 +157,7 @@ const invoiceReportHandler = async (startDateStr, endDateStr, userRole, username
         matchConditions.createdBy = username;
     }
     // Aggregation pipeline for filtering
-    const invoices = await BaseInvoice.aggregate([
+    const invoices = await InvoiceModel.aggregate([
         {
             $match: matchConditions
         },
@@ -199,7 +193,7 @@ const invoiceReportHandler = async (startDateStr, endDateStr, userRole, username
     return invoices;
 };
 
-const agingReportHandler = async (startDate, endDate) => {
+const agingReportHandler = async (startDate, endDate, InvoiceModel) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
@@ -208,7 +202,7 @@ const agingReportHandler = async (startDate, endDate) => {
     const parsedStartDate = parseDate(startDate);
     const parsedEndDate = parseDate(endDate);
 
-    const invoices = await BaseInvoice.aggregate([
+    const invoices = await InvoiceModel.aggregate([
         {
             $match: {
                 invoiceDate: { $gte: parsedStartDate, $lte: parsedEndDate }
@@ -323,16 +317,18 @@ const agingReportHandler = async (startDate, endDate) => {
 };
 
 const invoiceAgingReport = async (req, res) => {
-    const { startDate, endDate, filter } = req.body;
-    const userRole = req.userRole;
-    const userName = req.userName;
     try {
+        const { startDate, endDate, filter } = req.body;
+        const userRole = req.userRole;
+        const userName = req.userName;
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+
         let result;
 
         if (filter === 'agingReport') {
-            result = await agingReportHandler(startDate, endDate);
+            result = await agingReportHandler(startDate, endDate, InvoiceModel);
         } else if (filter === 'invoiceReport') {
-            result = await invoiceReportHandler(startDate, endDate, userRole, userName);
+            result = await invoiceReportHandler(startDate, endDate, userRole, userName, InvoiceModel);
         } else {
             return res.status(400).json({ message: 'Invalid filter value' });
         }
@@ -346,7 +342,8 @@ const invoiceAgingReport = async (req, res) => {
 const invoiceDelete = async (req, res) => {
     try {
         const { id } = req.params;
-        const deletedInvoice = await BaseInvoice.findByIdAndDelete(id);
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+        const deletedInvoice = await InvoiceModel.findByIdAndDelete(id);
         if (!deletedInvoice) {
             return res.status(404).json({ error: 'Invoice not found' });
         }
@@ -360,7 +357,8 @@ const invoiceDelete = async (req, res) => {
 const invoiceGetById = async (req, res) => {
     try {
         const { id } = req.params;
-        const invoice = await BaseInvoice.findById(id);
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+        const invoice = await InvoiceModel.findById(id);
         if (!invoice) {
             return res.status(404).json({ error: 'Invoice not found' });
         }
@@ -450,6 +448,8 @@ const updateInvoiceStages = (invoiceStatus, invoiceStages) => {
 const invoiceUpdate = async (req, res) => {
     try {
         const { id } = req.params;
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+
         const {
             invoiceType,
             invoiceNumber,
@@ -473,9 +473,8 @@ const invoiceUpdate = async (req, res) => {
             invoiceStages
         } = req.body;
         const updatedBy = req.userName;
-
         // Find the current invoice
-        const currentInvoice = await BaseInvoice.findById(id);
+        const currentInvoice = await InvoiceModel.findById(id);
         if (!currentInvoice) {
             return res.status(404).json({ error: 'Invoice not found' });
         }
@@ -514,7 +513,7 @@ const invoiceUpdate = async (req, res) => {
             updatedBy
         };
 
-        const updatedInvoice = await BaseInvoice.findByIdAndUpdate(id, invoiceData, { new: true });
+        const updatedInvoice = await InvoiceModel.findByIdAndUpdate(id, invoiceData, { new: true });
         if (!updatedInvoice) {
             return res.status(404).json({ error: 'Invoice not found' });
         }

@@ -1,20 +1,17 @@
 import mongoose from "mongoose";
-import { Customer } from "../../models/customer.js";
-import { customerValidation } from "../../validations/validations.js";
-import * as Yup from 'yup';
+import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
+import { CollectionNames } from "../../services/enums.js";
 
 const customerCreate = async (req, res) => {
     try {
-        const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
-
+        const CustomerModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS);
         const createdBy = req.userName || null;
         const companyId = req.companyId;
-
+        const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
         if (!companyId || !createdBy) {
             return res.status(400).json({ message: 'companyId and createdBy are required' });
         }
-        // await customerValidation.validate(req.body, { abortEarly: false });
-        const newCustomer = new Customer({
+        const newCustomer = new CustomerModel({
             createdBy,
             customerName,
             customerType,
@@ -40,8 +37,10 @@ const customerCreate = async (req, res) => {
 
 const customerGetParticular = async (req, res) => {
     try {
+        const CustomerModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS)
+
         const { id } = req.params;
-        const customer = await Customer.findById(id);
+        const customer = await CustomerModel.findById(id);
         if (!customer) {
             return res.status(404).json({ message: "Customer not found" });
         }
@@ -54,7 +53,8 @@ const customerGetParticular = async (req, res) => {
 
 const customerGetAll = async (req, res) => {
     try {
-        const clients = await Customer.find();
+        const CustomerModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS)
+        const clients = await CustomerModel.find();
         res.status(200).json(clients);
     } catch (error) {
         console.log(error);
@@ -64,6 +64,8 @@ const customerGetAll = async (req, res) => {
 
 const customerUpdate = async (req, res) => {
     try {
+        const CustomerModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS)
+
         const { id } = req.params;
         const update = req.body;
 
@@ -73,7 +75,7 @@ const customerUpdate = async (req, res) => {
         // Include updatedBy field
         update.updatedBy = userName || null;
 
-        const result = await Customer.findByIdAndUpdate(id, update, { new: true });
+        const result = await CustomerModel.findByIdAndUpdate(id, update, { new: true });
         if (!result) {
             return res.status(404).json({ message: "Customer not found" });
         }
@@ -86,11 +88,12 @@ const customerUpdate = async (req, res) => {
 
 const customerDeleteById = async (req, res) => {
     try {
+        const CustomerModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS)
         const customerId = req.params.id;
         if (!mongoose.Types.ObjectId.isValid(customerId)) {
             return res.status(400).json({ message: "Invalid Customer ID" });
         }
-        const deletedCustomer = await Customer.findByIdAndDelete(customerId);
+        const deletedCustomer = await CustomerModel.findByIdAndDelete(customerId);
         if (!deletedCustomer) {
             return res.status(404).json({ message: "Customer not found" });
         }

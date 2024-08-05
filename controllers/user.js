@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { UserLogin } from "../models/user.js";
 import jwt from "jsonwebtoken";
-import crypto from 'crypto';
 import bcrypt from "bcrypt";
 import { CompanyDetails } from "../models/company/company.js";
 import { ROLE } from "../services/enums.js";

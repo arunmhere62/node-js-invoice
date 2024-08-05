@@ -1,12 +1,17 @@
-import { CompanyDetails } from "../../models/company/company.js";
 import { UserLogin } from "../../models/user.js";
 import bcrypt from 'bcrypt';
+import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
+import { CollectionNames } from "../../services/enums.js";
 
 const companiesList = async (req, res) => {
     const companyName = req.companyName;
     try {
         // Step 1: Fetch all companies except 'superadminCorp'
-        const companies = await CompanyDetails.find({ companyName: { $ne: companyName } });
+        const CompanyModel = getDynamicModelNameGenerator(req, CollectionNames.COMPANY)
+
+        const companies = await CompanyModel.find({ companyName: { $ne: companyName } });
+
+        console.log("companies", companies);
 
         // Step 2: Fetch admins for each company and exclude the refreshToken field
         const companiesWithAdmins = await Promise.all(companies.map(async (company) => {
@@ -27,7 +32,9 @@ const companiesList = async (req, res) => {
 const getSingleCompany = async (req, res) => {
     try {
         // Step 1: Fetch the company details by ID
-        const companyDetails = await CompanyDetails.findById(req.params.id);
+        const CompanyModel = getDynamicModelNameGenerator(req, CollectionNames.COMPANY);
+
+        const companyDetails = await CompanyModel.findById(req.params.id);
         if (!companyDetails) {
             return res.status(404).json({ message: 'Company not found' });
         }
@@ -50,7 +57,9 @@ const getSingleCompany = async (req, res) => {
 const deleteCompany = async (req, res) => {
     try {
         // Step 1: Fetch the company details by ID
-        const company = await CompanyDetails.findById(req.params.id);
+        const CompanyModel = getDynamicModelNameGenerator(req, CollectionNames.COMPANY)
+
+        const company = await CompanyModel.findById(req.params.id);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
@@ -72,10 +81,12 @@ const deleteCompany = async (req, res) => {
 const updateCompany = async (req, res) => {
     try {
         // Extract company and admin details from request body
+        const CompanyModel = getDynamicModelNameGenerator(req, CollectionNames.COMPANY)
+
         const { companyDetails, adminDetails } = req.body;
 
         // Step 1: Update the company details
-        const updatedCompany = await CompanyDetails.findByIdAndUpdate(req.params.id, companyDetails, { new: true });
+        const updatedCompany = await CompanyModel.findByIdAndUpdate(req.params.id, companyDetails, { new: true });
 
         if (updatedCompany) {
             // Step 2: Update the UserLogin details if provided

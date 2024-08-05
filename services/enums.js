@@ -215,3 +215,27 @@ export const rolePermissions = {
         permissions.INVOICE_AGING_REPORT,
     ]
 };
+
+
+
+
+
+export const CollectionNames = Object.freeze({
+    CUSTOMERS: 'customers',
+    PAYMENT_TERMS: 'payment_terms',
+    GST_TYPE: 'gst_type',
+    TDS_TAX: 'tds_tax',
+    INVOICE: 'invoices',
+    SERVICE: 'services',
+    COMPANY: 'company',
+    // Add other collection names as needed
+});
+
+
+export const tokenReqValueEnums = Object.freeze({
+    USER_NAME: 'userName',
+    USER_EMAIL: 'userEmail',
+    USER_ROLE: 'userRole',
+    COMPANY_NAME: 'companyName',
+    COMPANY_ID: 'companyId',
+});

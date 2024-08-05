@@ -1,9 +1,9 @@
-import { BaseInvoice, OneTimeInvoice, RetainerInvoice } from "../../models/invoice.js";
-import { ROLE } from "../../services/enums.js";
+import { CollectionNames, ROLE, tokenReqValueEnums } from "../../services/enums.js";
 import { CompanyDetails } from '../../models/company/company.js'
-import { Customer } from "../../models/customer.js";
+import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
+import mongoose from "mongoose";
 
-const filterAdminDashboard = async (startDate, endDate) => {
+const filterAdminDashboard = async (startDate, endDate, InvoiceModel) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
@@ -23,7 +23,7 @@ const filterAdminDashboard = async (startDate, endDate) => {
         }
     };
 
-    const totalOverview = await BaseInvoice.aggregate([
+    const totalOverview = await InvoiceModel.aggregate([
         { $match: dateMatch },
         {
             $group: {
@@ -42,7 +42,7 @@ const filterAdminDashboard = async (startDate, endDate) => {
         }
     ]);
 
-    const paidOverview = await BaseInvoice.aggregate([
+    const paidOverview = await InvoiceModel.aggregate([
         { $match: { ...dateMatch, invoiceStatus: "PAID" } },
         {
             $group: {
@@ -61,7 +61,7 @@ const filterAdminDashboard = async (startDate, endDate) => {
         }
     ]);
 
-    const unpaidOverview = await BaseInvoice.aggregate([
+    const unpaidOverview = await InvoiceModel.aggregate([
         { $match: { ...dateMatch, invoiceStatus: { $ne: "PAID" } } },
         {
             $group: {
@@ -80,7 +80,7 @@ const filterAdminDashboard = async (startDate, endDate) => {
         }
     ]);
 
-    const invoiceStatus = await BaseInvoice.aggregate([
+    const invoiceStatus = await InvoiceModel.aggregate([
         { $match: dateMatch },
         {
             $group: {
@@ -121,19 +121,17 @@ const filterAdminDashboard = async (startDate, endDate) => {
     return result;
 };
 
-const filterApproverDashboard = async (startDate, endDate) => {
+const filterApproverDashboard = async (startDate, endDate, InvoiceModel) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
     };
-
-    console.log("Parsing dates...");
     const parsedStartDate = parseDate(startDate);
     const parsedEndDate = parseDate(endDate);
 
     if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
         throw new Error('Invalid date format');
-    }
+    };
 
     const dateMatch = {
         invoiceDate: {
@@ -143,9 +141,9 @@ const filterApproverDashboard = async (startDate, endDate) => {
     };
 
     try {
-        const invoices = await BaseInvoice.find({ ...dateMatch, invoiceStatus: "PENDING" })
+        const invoices = await InvoiceModel.find({ ...dateMatch, invoiceStatus: "PENDING" })
             .select({
-                _id: 1, // Ensure _id is selected for transformation
+                _id: 1,
                 id: "$_id",
                 invoiceType: 1,
                 invoiceNumber: 1,
@@ -187,11 +185,10 @@ const filterApproverDashboard = async (startDate, endDate) => {
             })
             .exec();
 
-        // Creating the result object
         const result = {
             totalInvoices: invoices.length,
             pendingInvoices: invoices.length,
-            approvedInvoices: 0,  // Assuming you only want pending invoices here
+            approvedInvoices: 0,
             pendingInvoicesList: invoices
         };
 
@@ -202,7 +199,9 @@ const filterApproverDashboard = async (startDate, endDate) => {
     }
 };
 
-const filterSuperAdminDashboard = async (startDate, endDate) => {
+const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, CustomersModel, excludedCompanyName) => {
+    console.log("hello super admin");
+
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
@@ -218,48 +217,41 @@ const filterSuperAdminDashboard = async (startDate, endDate) => {
     // Get total number of companies
     const totalNoOfCompany = await CompanyDetails.countDocuments();
 
-    // Get total number of invoices
-    const totalNoOfInvoices = await BaseInvoice.countDocuments({
-        invoiceDate: {
-            $gte: parsedStartDate,
-            $lte: parsedEndDate
-        }
-    });
+    // Get list of companies excluding the superadmin
+    const companiesList = await CompanyDetails.find({ companyName: { $ne: excludedCompanyName } }).lean();
 
-    // Get company overview
-    const companyOverview = await CompanyDetails.aggregate([
-        {
-            $lookup: {
-                from: 'baseinvoices', // Adjust this to match your invoices collection name
-                localField: '_id', // Field in CompanyDetails to match
-                foreignField: 'companyId', // Field in BaseInvoice to match
-                as: 'invoices'
+    // Initialize an array to store company overviews
+    const companyOverview = [];
+
+    // Get total number of invoices
+    let totalNoOfInvoices = 0;
+
+    for (const company of companiesList) {
+        // Construct collection names based on company name
+        const invoiceCollectionName = `${company.companyName.replace(/\s+/g, '').toLowerCase()}_invoices`;
+        const customerCollectionName = `${company.companyName.replace(/\s+/g, '').toLowerCase()}_customers`;
+
+        // Count invoices for each company
+        const invoiceCount = await mongoose.connection.collection(invoiceCollectionName).countDocuments({
+            invoiceDate: {
+                $gte: parsedStartDate,
+                $lte: parsedEndDate
             }
-        },
-        {
-            $lookup: {
-                from: 'customers', // Name of the customers collection
-                localField: '_id', // Field in CompanyDetails to match
-                foreignField: 'companyId', // Field in customers to match
-                as: 'customers'
-            }
-        },
-        {
-            $addFields: {
-                noOfInvoices: { $size: { $ifNull: ["$invoices", []] } },
-                noOfCustomers: { $size: { $ifNull: ["$customers", []] } }
-            }
-        },
-        {
-            $project: {
-                _id: 0, // Exclude the _id field from the output
-                id: "$_id",
-                companyName: 1,
-                noOfInvoice: "$noOfInvoices",
-                noOfCustomers: "$noOfCustomers"
-            }
-        }
-    ]);
+        });
+
+        totalNoOfInvoices += invoiceCount;
+
+        // Count customers for each company
+        const customerCount = await mongoose.connection.collection(customerCollectionName).countDocuments();
+
+        // Add to company overview
+        companyOverview.push({
+            companyName: company.companyName,
+            id: company._id.toString(),
+            noOfInvoice: invoiceCount,
+            noOfCustomers: customerCount
+        });
+    }
 
     return {
         totalNoOfCompany,
@@ -268,7 +260,9 @@ const filterSuperAdminDashboard = async (startDate, endDate) => {
     };
 };
 
-const filterStandardUserDashboard = async (startDate, endDate, userName) => {
+const filterStandardUserDashboard = async (startDate, endDate, userName, InvoiceModel) => {
+    console.log("InvoiceModel", InvoiceModel);
+
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
@@ -282,16 +276,18 @@ const filterStandardUserDashboard = async (startDate, endDate, userName) => {
     }
 
     // Get total number of invoices created by the user
-    const totalInvoices = await BaseInvoice.countDocuments({
+    const totalInvoices = await InvoiceModel.countDocuments({
         createdBy: userName,
         invoiceDate: {
             $gte: parsedStartDate,
             $lte: parsedEndDate
         }
     });
+    console.log("totalInvoices", totalInvoices);
+
 
     // Get pending invoices count
-    const pendingInvoices = await BaseInvoice.countDocuments({
+    const pendingInvoices = await InvoiceModel.countDocuments({
         createdBy: userName,
         invoiceDate: {
             $gte: parsedStartDate,
@@ -301,7 +297,7 @@ const filterStandardUserDashboard = async (startDate, endDate, userName) => {
     });
 
     // Get approved invoices count
-    const approvedInvoices = await BaseInvoice.countDocuments({
+    const approvedInvoices = await InvoiceModel.countDocuments({
         createdBy: userName,
         invoiceDate: {
             $gte: parsedStartDate,
@@ -311,14 +307,13 @@ const filterStandardUserDashboard = async (startDate, endDate, userName) => {
     });
 
     // Get all invoices list with details
-    const allInvoicesList = await BaseInvoice.find({
+    const allInvoicesList = await InvoiceModel.find({
         createdBy: userName,
         invoiceDate: {
             $gte: parsedStartDate,
             $lte: parsedEndDate
         }
-    }).populate('customerId') // Assumes you have a reference to customers
-        .populate('companyId');  // Assumes you have a reference to companies
+    }).populate('companyId');  // Assumes you have a reference to companies
 
     // Format the invoices
     const formattedInvoicesList = allInvoicesList.map(invoice => ({
@@ -360,21 +355,22 @@ const filterStandardUserDashboard = async (startDate, endDate, userName) => {
 const dashboardReports = async (req, res) => {
     const userRole = req.userRole;
     const userName = req.userName;
+    const companyName = req[tokenReqValueEnums.COMPANY_NAME]
     const { startDate, endDate } = req.body;
-    console.log("userRole", userRole);
-    console.log("userRole", userRole);
+    const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
+    const CustomersModel = getDynamicModelNameGenerator(req, CollectionNames.CUSTOMERS);
 
     try {
         let result = null;
 
         if (userRole === ROLE.ADMIN) {
-            result = await filterAdminDashboard(startDate, endDate);
+            result = await filterAdminDashboard(startDate, endDate, InvoiceModel);
         } else if (userRole === ROLE.APPROVER) {
-            result = await filterApproverDashboard(startDate, endDate);
+            result = await filterApproverDashboard(startDate, endDate, InvoiceModel);
         } else if (userRole === ROLE.SUPERADMIN) {
-            result = await filterSuperAdminDashboard(startDate, endDate);
+            result = await filterSuperAdminDashboard(startDate, endDate, InvoiceModel, CustomersModel, companyName);
         } else if (userRole === ROLE.STANDARDUSER) {
-            result = await filterStandardUserDashboard(startDate, endDate, userName);
+            result = await filterStandardUserDashboard(startDate, endDate, userName, InvoiceModel);
         }
 
         else {

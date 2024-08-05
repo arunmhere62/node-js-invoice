@@ -148,6 +148,10 @@ const OneTimeInvoiceSchema = new mongoose.Schema({
 // Create the base model
 const BaseInvoice = mongoose.model("Invoice", BaseInvoiceSchema);
 
+export const getDynamicInvoiceModel = (collectionName) => {
+    return mongoose.model(collectionName, BaseInvoiceSchema);
+};
+
 // Create discriminators
 const RetainerInvoice = BaseInvoice.discriminator('RetainerInvoice', RetainerInvoiceSchema);
 const OneTimeInvoice = BaseInvoice.discriminator('OneTimeInvoice', OneTimeInvoiceSchema);

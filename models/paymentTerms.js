@@ -28,6 +28,6 @@ const PaymentTerms = mongoose.Schema({
     },
 });
 
-// Middleware to format date fields before saving
-const PaymentTermsSchema = mongoose.model("PaymentTerms", PaymentTerms);
-export { PaymentTermsSchema };
+export const getDynamicPaymentTermsModel = (collectionName) => {
+    return mongoose.model(collectionName, PaymentTerms);
+};
