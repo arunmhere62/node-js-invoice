@@ -207,7 +207,6 @@ const userRegistration = async (req, res) => {
             await session.commitTransaction();
             session.endSession();
 
-
             return res.status(201).json({ success: `New SUPERADMIN user with email ${userEmail} created!` });
         } else if (userRole === ROLE.ADMIN) {
             if (!tokenRoles.includes(ROLE.SUPERADMIN)) {
@@ -216,11 +215,19 @@ const userRegistration = async (req, res) => {
                 return res.status(403).json({ message: 'Unauthorized. Only SUPERADMIN can create ADMIN users.' });
             }
 
+            // Check if there are already two ADMIN users
+            const adminCount = await UserLogin.countDocuments({ userRole: ROLE.ADMIN });
+            if (adminCount >= 2) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ message: 'Cannot create more than two Companies and ADMIN users.' });
+            };
+
             if (!userEmail || !userName || !password || !userRole) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'userEmail, userName, password, and userRole are required.' });
-            }
+            };
 
             if (!companyName || !companyEmail || !companyPhone || !companyCountry || !companyState || !companyAddress || !companyWebsite || !companyTaxNumber || !companyRegNumber) {
                 await session.abortTransaction();
@@ -264,7 +271,6 @@ const userRegistration = async (req, res) => {
 
             await session.commitTransaction();
             session.endSession();
-
 
             return res.status(201).json({ success: `New ADMIN user with email ${userEmail} created!` });
         } else if (userRole === ROLE.APPROVER || userRole === ROLE.STANDARDUSER) {
@@ -328,6 +334,7 @@ const userRegistration = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error.' });
     }
 };
+
 
 
 
