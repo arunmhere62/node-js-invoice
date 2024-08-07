@@ -111,12 +111,10 @@ const userLogin = async (req, res) => {
 
 // ! --------- registration -----------
 const userRegistration = async (req, res) => {
-    const {
-        userEmail,
-        userRole,
-    } = req.body;
-
+    const { userDetails } = req.body;
+    const { userEmail, userRole } = userDetails;
     const tokenRoles = req.userRole; // Extract roles from the request object
+
     const companyIdFromToken = req.companyId; // Extract company ID from the token
 
     const validRoles = [ROLE.ADMIN, ROLE.SUPERADMIN, ROLE.APPROVER, ROLE.STANDARDUSER];
@@ -161,14 +159,14 @@ const userRegistration = async (req, res) => {
 
 
 const registerApproverOrStandardUser = async (req, res, session, tokenRoles, companyIdFromToken) => {
-    const {
-        userEmail,
-        userName,
-        password,
-        userMobile,
-        description,
-        userRole,
-    } = req.body;
+    const { userDetails } = req.body;
+
+    if (!userDetails) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ message: 'userDetails are required' })
+    }
+    const { userEmail, userName, password, userMobile, description, userRole, } = userDetails;
 
     if (!tokenRoles.includes(ROLE.ADMIN)) {
         await session.abortTransaction();
@@ -201,22 +199,12 @@ const registerApproverOrStandardUser = async (req, res, session, tokenRoles, com
 
 const registerAdmin = async (req, res, session, tokenRoles) => {
     const {
-        userEmail,
-        userName,
-        password,
-        userMobile,
-        description,
-        userRole,
-        companyName,
-        companyEmail,
-        companyPhone,
-        companyCountry,
-        companyState,
-        companyAddress,
-        companyWebsite,
-        companyTaxNumber,
-        companyRegNumber,
+        userDetails, companyDetails
     } = req.body;
+
+    const { userEmail, userName, password, userMobile, description, userRole, } = userDetails;
+    const { companyName, companyEmail, companyPhone, companyCountry, companyState, companyAddress,
+        companyWebsite, companyTaxNumber, companyRegNumber, } = companyDetails;
 
     if (!tokenRoles.includes(ROLE.SUPERADMIN)) {
         await session.abortTransaction();
@@ -313,7 +301,6 @@ const registerSuperAdmin = async (req, res, session) => {
     return res.status(201).json({ success: `New SUPERADMIN user with email ${userEmail} created!` });
 };
 
-
 const createCompanyDetails = async (companyDetails, session) => {
     const companyDetailsDoc = new CompanyDetails(companyDetails);
     await companyDetailsDoc.save({ session });
@@ -342,12 +329,12 @@ const updateUserData = async (req, res) => {
             const updatedCompany = await CompanyDetails.findByIdAndUpdate(req.params.id, companyDetails, { new: true });
 
             if (updatedCompany) {
-                // Step 2: Update the UserLogin details if adminDetails are provided
+                // Step 2: Update the UserLogin details if userDetails are provided
                 let updatedAdmin;
-                if (adminDetails) {
+                if (userDetails) {
                     updatedAdmin = await UserLogin.findOneAndUpdate(
                         { companyId: updatedCompany._id, userRole: 'ADMIN' },
-                        adminDetails,
+                        userDetails,
                         { new: true }
                     ).select('-refreshToken');
                 } else {
@@ -359,7 +346,7 @@ const updateUserData = async (req, res) => {
                 // Step 3: Construct the response object including the company and its admin
                 const companyWithAdmin = {
                     companyDetails: updatedCompany,
-                    adminDetails: updatedAdmin
+                    userDetails: updatedAdmin
                 };
 
                 // Step 4: Send the response
@@ -407,11 +394,11 @@ const getAllCompaniesWithAdmins = async (excludedCompanyName) => {
 
             return {
                 companyDetails: company,
-                adminDetails: admin,
+                userDetails: admin,
             };
         }));
 
-        return companiesWithAdmins.filter(company => company.adminDetails); // Exclude companies without an admin
+        return companiesWithAdmins.filter(company => company.userDetails); // Exclude companies without an admin
     } catch (err) {
         throw new Error(err.message);
     }
@@ -471,7 +458,7 @@ const getSingleUser = async (req, res) => {
             }
 
             const response = {
-                adminDetails,
+                userDetails: adminDetails,
                 companyDetails
             };
 
