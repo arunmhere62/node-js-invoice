@@ -480,7 +480,6 @@ const getSingleUser = async (req, res) => {
     }
 };
 
-
 const deleteUser = async (req, res) => {
     const userRole = req.userRole; // Extract the user's role from the request
     const userId = req.params.id; // Extract the user ID from the request parameters

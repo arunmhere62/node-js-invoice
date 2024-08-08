@@ -103,7 +103,7 @@ const invoiceCreate = async (req, res) => {
 
         // Create new invoice if validation passes
         const newInvoice = await InvoiceModel.create(invoiceData);
-        res.status(201).json(newInvoice);
+        res.status(201).json({ message: "New Invoice Created successfully" });
     } catch (error) {
         console.error('Error creating invoice:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -517,8 +517,17 @@ const invoiceUpdate = async (req, res) => {
         if (!updatedInvoice) {
             return res.status(404).json({ error: 'Invoice not found' });
         }
-
-        res.status(200).json(updatedInvoice);
+        let responseMessage = 'Invoice updated successfully';
+        if (invoiceStatus === 'PENDING') {
+            responseMessage = 'Invoice updated & sent to approver successfully';
+        } else if (invoiceStatus === 'APPROVED') {
+            responseMessage = 'Invoice updated & approved successfully';
+        } else if (invoiceStatus === 'RETURNED') {
+            responseMessage = 'Invoice updated & Returned successfully';
+        } else if (invoiceStatus === 'DRAFT') {
+            responseMessage = 'Invoice Updated successfully and in Draft stage';
+        }
+        res.status(200).json({ message: responseMessage });
     } catch (error) {
         console.error('Error updating invoice:', error);
         res.status(500).json({ error: 'Internal server error' });
