@@ -43,7 +43,7 @@ const userLogin = async (req, res) => {
                 }
             },
             "secret-key",
-            { expiresIn: '30days' }
+            { expiresIn: '10d' }
         );
 
         // Check if the user already has a refresh token
@@ -424,7 +424,7 @@ const getAllUsers = async (req, res) => {
         if (userRole === ROLE.SUPERADMIN) {
             const companiesWithAdmins = await getAllCompaniesWithAdmins(companyName);
             res.status(200).json(companiesWithAdmins);
-        } else if (userRole === ROLE.ADMIN) {
+        } else if (userRole === ROLE.ADMIN || ROLE.APPROVER || ROLE.STANDARDUSER) {
             if (!companyId) {
                 return res.status(400).json({ message: 'Company ID is required for ADMIN role.' });
             }

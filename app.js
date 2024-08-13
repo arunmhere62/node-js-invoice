@@ -1,38 +1,43 @@
 import express from "express";
 import mongoose from "mongoose";
-import dashboardRouter from './routes/dashboard.js'
-import companyRouter from './routes/company.js'
-import userRouter from './routes/users.js';
-import clientRouter from "./routes/customer.js";
-import serviceRouter from "./routes/services.js";
-import invoiceRouter from "./routes/invoice.js";
-import tdsTaxRouter from "./routes/taxes/tdsTax.js"
-import gstType from "./routes/taxes/gstType.js"
-import paymentTerms from "./routes/paymentTerms.js"
 import cors from "cors";
 import dotenv from "dotenv";
 import verifyJWT from "./middleware/verifyJWT.js";
 import handleRefreshToken from "./controllers/refreshToken.js";
 import { userLogin } from "./controllers/user.js";
+import dashboardRouter from './routes/dashboard.js';
+import companyRouter from './routes/company.js';
+import userRouter from './routes/users.js';
+import clientRouter from "./routes/customer.js";
+import serviceRouter from "./routes/services.js";
+import invoiceRouter from "./routes/invoice.js";
+import tdsTaxRouter from "./routes/taxes/tdsTax.js";
+import gstType from "./routes/taxes/gstType.js";
+import paymentTerms from "./routes/paymentTerms.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = 4000;
 
+// Middleware to parse JSON bodies
+app.use(express.json());
+
 // Allow requests from all origins, you can configure it according to your requirements
 app.use(cors({
   origin: true,
   credentials: true,
 }));
-// Middleware to parse JSON bodies
-app.use(express.json());
 
-// Define routes
-app.post("/login", userLogin);
+// Routes that don't require JWT verification
 app.get("/refresh", handleRefreshToken);
+app.post("/login", userLogin);
+
+// Protecting specific routes with JWT middleware
+app.use(verifyJWT);
+
+// Protected Routes
 app.use("/user", userRouter);
-app.use(verifyJWT); // Applying middleware globally
 app.use("/dashboard", dashboardRouter);
 app.use("/company", companyRouter);
 app.use("/customer", clientRouter);
@@ -43,8 +48,7 @@ app.use("/gstType", gstType);
 app.use("/paymentTerms", paymentTerms);
 
 // Connect to MongoDB
-mongoose
-  .connect("mongodb+srv://arun1234:invoice@cluster0.ykqmtot.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+mongoose.connect("mongodb+srv://arun1234:invoice@cluster0.ykqmtot.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

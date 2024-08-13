@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 
 const verifyJWT = (req, res, next) => {
+    console.log(req);
+
     const authHeader = req.headers.authorization || req.headers.Authorization;
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized. Missing or invalid token.' });
     const token = authHeader.split(' ')[1];
