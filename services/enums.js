@@ -66,9 +66,6 @@ export const permissions = {
     INVOICE_LIST: 'invoiceList',
     INVOICE_DETAILS_VIEW: 'invoiceView',
     INVOICE_AGING_REPORT: 'invoiceAgingReport',
-
-
-
 };
 
 export const rolePermissions = {
@@ -164,6 +161,9 @@ export const rolePermissions = {
 
         // customer List 
         permissions.CUSTOMER_LIST,
+
+        // tdsTax permissions
+        permissions.TDS_TAX_LIST,
 
     ],
     [ROLE.STANDARDUSER]: [

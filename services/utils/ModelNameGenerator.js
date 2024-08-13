@@ -7,7 +7,7 @@ import { getDynamicTdsTaxModel } from "../../models/taxes/tdsTax.js";
 import { CollectionNames, tokenReqValueEnums } from "../enums.js";
 
 export const getDynamicModelNameGenerator = (req, collectionType) => {
-    const companyName = req[tokenReqValueEnums.COMPANY_NAME];
+    const companyName = req[tokenReqValueEnums.COMPANY_ID];
     const collectionName = `${companyName}_${collectionType}`;
     switch (collectionType) {
         case CollectionNames.SERVICE:
