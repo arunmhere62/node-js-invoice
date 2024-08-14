@@ -210,8 +210,7 @@ const filterApproverDashboard = async (startDate, endDate, InvoiceModel) => {
 
 
 
-const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, CustomersModel, excludedCompanyName) => {
-
+const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, CustomersModel, excludedCompanyName, companyId) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
         return new Date(Date.UTC(year, month - 1, day));
@@ -225,10 +224,13 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
     }
 
     // Get total number of companies
-    const totalNoOfCompany = await CompanyDetails.countDocuments();
-
+    const totalNoOfCompany = await CompanyDetails.countDocuments({
+        companyName: { $ne: excludedCompanyName }
+    });
     // Get list of companies excluding the superadmin
     const companiesList = await CompanyDetails.find({ companyName: { $ne: excludedCompanyName } }).lean();
+
+    console.log("companiesList", companiesList);
 
     // Initialize an array to store company overviews
     const companyOverview = [];
@@ -237,9 +239,9 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
     let totalNoOfInvoices = 0;
 
     for (const company of companiesList) {
-        // Construct collection names based on company name
-        const invoiceCollectionName = `${company.companyName.replace(/\s+/g, '').toLowerCase()}_invoices`;
-        const customerCollectionName = `${company.companyName.replace(/\s+/g, '').toLowerCase()}_customers`;
+        // Construct collection names based on company id
+        const invoiceCollectionName = `${company._id.toString().replace(/\s+/g, '').toLowerCase()}_invoices`;
+        const customerCollectionName = `${company._id.toString().replace(/\s+/g, '').toLowerCase()}_customers`;
 
         // Count invoices for each company
         const invoiceCount = await mongoose.connection.collection(invoiceCollectionName).countDocuments({
@@ -269,6 +271,7 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
         companyOverview
     };
 };
+
 
 const filterStandardUserDashboard = async (startDate, endDate, userName, InvoiceModel) => {
 
@@ -362,7 +365,7 @@ const filterStandardUserDashboard = async (startDate, endDate, userName, Invoice
 const dashboardReports = async (req, res) => {
     const userRole = req.userRole;
     const userName = req.userName;
-
+    const companyId = req.companyId;
     const companyName = req[tokenReqValueEnums.COMPANY_NAME];
 
     const { startDate, endDate } = req.body;
@@ -377,7 +380,7 @@ const dashboardReports = async (req, res) => {
         } else if (userRole === ROLE.APPROVER) {
             result = await filterApproverDashboard(startDate, endDate, InvoiceModel);
         } else if (userRole === ROLE.SUPERADMIN) {
-            result = await filterSuperAdminDashboard(startDate, endDate, InvoiceModel, CustomersModel, companyName);
+            result = await filterSuperAdminDashboard(startDate, endDate, InvoiceModel, CustomersModel, companyName, companyId);
         } else if (userRole === ROLE.STANDARDUSER) {
             result = await filterStandardUserDashboard(startDate, endDate, userName, InvoiceModel);
         }

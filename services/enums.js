@@ -161,6 +161,7 @@ export const rolePermissions = {
 
         // customer List 
         permissions.CUSTOMER_LIST,
+        permissions.CUSTOMER_DETAILS_VIEW,
 
         // tdsTax permissions
         permissions.TDS_TAX_LIST,

@@ -103,7 +103,11 @@ const invoiceCreate = async (req, res) => {
 
         // Create new invoice if validation passes
         const newInvoice = await InvoiceModel.create(invoiceData);
-        res.status(201).json({ message: "New Invoice Created successfully" });
+        if (invoiceStatus === "DRAFT") {
+            res.status(201).json({ message: "New Invoice Created successfully and in DRAFT stage" });
+        } else if (invoiceStatus === "PENDING") {
+            res.status(201).json({ message: "New Invoice Created successfully and sent approver" });
+        }
     } catch (error) {
         console.error('Error creating invoice:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -121,7 +125,9 @@ const invoiceGetAll = async (req, res) => {
         if (userRole === ROLE.STANDARDUSER) {
             query = { createdBy: userName };
         } else if (userRole === ROLE.APPROVER) {
-            query = { invoiceStatus: { $in: ['PENDING', 'APPROVED'] } };
+            query = { invoiceStatus: { $in: ['PENDING', 'APPROVED',] } };
+        } else {
+            query = {}
         }
 
         const modifiedInvoices = await InvoiceModel.find(query);

@@ -164,9 +164,10 @@ const registerApproverOrStandardUser = async (req, res, session, tokenRoles, com
     if (!userDetails) {
         await session.abortTransaction();
         session.endSession();
-        return res.status(400).json({ message: 'userDetails are required' })
+        return res.status(400).json({ message: 'userDetails are required' });
     }
-    const { userEmail, userName, password, userMobile, description, userRole, } = userDetails;
+
+    const { userEmail, userName, password, userMobile, description, userRole } = userDetails;
 
     if (!tokenRoles.includes(ROLE.ADMIN)) {
         await session.abortTransaction();
@@ -174,29 +175,48 @@ const registerApproverOrStandardUser = async (req, res, session, tokenRoles, com
         return res.status(403).json({ message: 'Unauthorized. You need to be an ADMIN to create APPROVER or STANDARDUSER users.' });
     }
 
-    const companyDetails = await CompanyDetails.findById(companyIdFromToken);
-    if (!companyDetails) {
+    try {
+        // Find existing users with the same role and company ID
+        const findDuplicate = await UserLogin.find({
+            companyId: companyIdFromToken,
+            userRole: userRole
+        });
+
+        // Check if any users were found
+        if (findDuplicate.length > 0) {
+            return res.status(409).json({ message: "Approver already present, you cannot create multiple approvers" });
+        }
+
+        // Check if company details exist
+        const companyDetails = await CompanyDetails.findById(companyIdFromToken);
+        if (!companyDetails) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(500).json({ message: 'Company details not found.' });
+        }
+
+        // Create the new user
+        await createUser({
+            userEmail,
+            userName,
+            password,
+            userRole,
+            userMobile,
+            description,
+            companyId: companyIdFromToken
+        }, session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(201).json({ success: `New user with email ${userEmail} created!` });
+    } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        return res.status(500).json({ message: 'Company details not found.' });
+        console.error('Error during user registration:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
     }
-
-    await createUser({
-        userEmail,
-        userName,
-        password,
-        userRole,
-        userMobile,
-        description,
-        companyId: companyIdFromToken,
-    }, session);
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.status(201).json({ success: `New user with email ${userEmail} created!` });
 };
-
 const registerAdmin = async (req, res, session, tokenRoles) => {
     const {
         userDetails, companyDetails
