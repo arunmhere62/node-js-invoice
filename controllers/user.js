@@ -3,7 +3,7 @@ import { UserLogin } from "../models/user.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { CompanyDetails } from "../models/company/company.js";
-import { ROLE, tokenReqValueEnums } from "../services/enums.js";
+import { CollectionNames, ROLE, tokenReqValueEnums } from "../services/enums.js";
 
 // ! ------ login -------
 const userLogin = async (req, res) => {
@@ -503,7 +503,6 @@ const getSingleUser = async (req, res) => {
 const deleteUser = async (req, res) => {
     const userRole = req.userRole; // Extract the user's role from the request
     const userId = req.params.id; // Extract the user ID from the request parameters
-
     try {
         if (userRole === ROLE.SUPERADMIN) {
             // Delete the SUPERADMIN user and their associated company details
@@ -516,7 +515,19 @@ const deleteUser = async (req, res) => {
             await UserLogin.deleteOne({ _id: userId });
             await CompanyDetails.deleteOne({ _id: companyId });
 
-            res.status(200).json({ message: 'SUPERADMIN user and associated company deleted successfully' });
+            const collections = [
+                `${companyId}_${CollectionNames.SERVICE}`,
+                `${companyId}_${CollectionNames.CUSTOMERS}`,
+                `${companyId}_${CollectionNames.TDS_TAX}`,
+                `${companyId}_${CollectionNames.INVOICE}`,
+                `${companyId}_${CollectionNames.PAYMENT_TERMS}`,
+                `${companyId}_${CollectionNames.GST_TYPE}`,
+            ];
+
+            for (const collectionName of collections) {
+                await mongoose.connection.db(collectionName).deleteMany({});
+            };
+            res.status(200).json({ message: 'SUPERADMIN ,company details and all related data deleted successfully' });
         } else if (userRole === ROLE.ADMIN) {
             // Delete the ADMIN user details
             const user = await UserLogin.findById(userId);
@@ -537,3 +548,4 @@ const deleteUser = async (req, res) => {
 };
 
 export { userLogin, userRegistration, updateUserData, getAllUsers, getSingleUser, deleteUser };
+

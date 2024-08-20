@@ -208,8 +208,6 @@ const filterApproverDashboard = async (startDate, endDate, InvoiceModel) => {
     }
 };
 
-
-
 const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, CustomersModel, excludedCompanyName, companyId) => {
     const parseDate = (dateStr) => {
         const [day, month, year] = dateStr.split('-');
@@ -230,7 +228,6 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
     // Get list of companies excluding the superadmin
     const companiesList = await CompanyDetails.find({ companyName: { $ne: excludedCompanyName } }).lean();
 
-    console.log("companiesList", companiesList);
 
     // Initialize an array to store company overviews
     const companyOverview = [];

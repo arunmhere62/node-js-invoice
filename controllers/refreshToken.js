@@ -10,12 +10,9 @@ const handleRefreshToken = async (req, res) => {
     if (!authHeader) {
         return res.status(401).json({ message: 'Refresh token is required.' });
     }
-
     try {
         // Find the user associated with the refresh token
         const foundUser = await UserLogin.findOne({ refreshToken: { $in: [authHeader] } });
-
-        console.log("Found User:", foundUser);
 
         if (!foundUser) {
             return res.status(403).json({ message: 'Invalid refresh token.' });

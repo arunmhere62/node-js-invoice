@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import multer from "multer";
 import cors from "cors";
 import dotenv from "dotenv";
 import verifyJWT from "./middleware/verifyJWT.js";
@@ -14,12 +15,14 @@ import invoiceRouter from "./routes/invoice.js";
 import tdsTaxRouter from "./routes/taxes/tdsTax.js";
 import gstType from "./routes/taxes/gstType.js";
 import paymentTerms from "./routes/paymentTerms.js";
-
+import { sendMail } from "./controllers/invoice/invoiceMail.js";
 dotenv.config();
 
 const app = express();
 const PORT = 4000;
 
+// Middleware for form-data
+const upload = multer({ storage: multer.memoryStorage() });
 // Middleware to parse JSON bodies
 app.use(express.json());
 
@@ -37,6 +40,9 @@ app.post("/login", userLogin);
 app.use(verifyJWT);
 
 // Protected Routes
+
+// Middleware for form-data
+app.use('/sendMail', upload.fields([{ name: 'pdfFile', maxCount: 1 }]), sendMail);
 app.use("/user", userRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/company", companyRouter);

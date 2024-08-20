@@ -11,5 +11,4 @@ router.post("/delete/:id", checkPermission(permissions.INVOICE_DELETE), invoiceD
 router.post("/update/:id", checkPermission(permissions.INVOICE_EDIT), invoiceUpdate)
 router.post("/get/:id", checkPermission(permissions.INVOICE_DETAILS_VIEW), invoiceGetById)
 router.post("/reports", checkPermission(permissions.INVOICE_AGING_REPORT), invoiceAgingReport)
-
 export default router;
