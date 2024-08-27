@@ -42,7 +42,7 @@ app.use(verifyJWT);
 // Protected Routes
 
 // Middleware for form-data
-app.use('/sendMail', upload.fields([{ name: 'pdfFile', maxCount: 1 }]), sendMail);
+app.use('/sendMail/:id', upload.fields([{ name: 'pdfFile', maxCount: 1 }]), sendMail);
 app.use("/user", userRouter);
 app.use("/dashboard", dashboardRouter);
 app.use("/company", companyRouter);

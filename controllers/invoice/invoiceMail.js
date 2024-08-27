@@ -1,9 +1,15 @@
 import nodemailer from 'nodemailer'; // Assuming you're using nodemailer for sending emails
+import { updateInvoiceStages, validateStageTransition } from './invoice.js';
+import { CollectionNames } from '../../services/enums.js';
+import { getDynamicModelNameGenerator } from '../../services/utils/ModelNameGenerator.js';
 
 const sendMail = async (req, res) => {
     try {
+        const { id } = req.params;
+        const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
         // Access form fields
-        const invoiceDataString = req.body.invoiceData;
+        const invoiceDataString = req.body.data;
+
         if (!invoiceDataString) {
             return res.status(400).json({ error: 'Missing invoice data' });
         };
@@ -11,11 +17,16 @@ const sendMail = async (req, res) => {
         // Parse the JSON string
         let invoiceData;
         try {
-            invoiceData = JSON.parse(invoiceDataString);
+            invoiceData = JSON.parse(invoiceDataString.trim());
         } catch (error) {
             return res.status(400).json({ error: 'Invalid JSON format' });
         };
+        // validate stages
+        if (!validateStageTransition(invoiceData.invoiceStages, invoiceData.invoiceStatus)) {
+            return res.status(400).json({ message: 'Invalid stage transition' })
+        };
 
+        invoiceData.invoiceStages = updateInvoiceStages(invoiceData.invoiceStatus, invoiceData.invoiceStages)
         // Access file data
         const file = req.files['pdfFile'] ? req.files['pdfFile'][0] : null; // Get the file from the 'pdfFile' field
 
@@ -25,9 +36,6 @@ const sendMail = async (req, res) => {
         } else {
             console.log("No file received");
         };
-
-        // Log the extracted invoice data
-        console.log("Invoice Data from body:", invoiceData);
 
         // Example: Send email using nodemailer (assuming you have set up nodemailer)
         let transporter = nodemailer.createTransport({
@@ -51,7 +59,12 @@ const sendMail = async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        res.status(200).json({ message: 'Email sent successfully' });
+        const updateInvoice = await InvoiceModel.findByIdAndUpdate(id, invoiceData, { new: true });
+
+        if (!updateInvoice) {
+            return res.status(404).json({ message: "Invoice not found" })
+        }
+        res.status(200).json({ message: 'Email sent successfully and invoice updated successfully' });
     } catch (error) {
         console.error('Error sending email:', error);
         res.status(500).json({ error: 'Internal server error' });

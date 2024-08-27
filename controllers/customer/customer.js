@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
 import { CollectionNames } from "../../services/enums.js";
+import { CompanyDetails } from "../../models/company/company.js";
 
 const customerCreate = async (req, res) => {
     try {
@@ -8,9 +9,26 @@ const customerCreate = async (req, res) => {
         const createdBy = req.userName || null;
         const companyId = req.companyId;
         const { customerName, customerType, companyName, customerEmail, customerPhone, paymentTerms, country, address, city, state, pinCode, contactPersons } = req.body;
+
         if (!companyId || !createdBy) {
             return res.status(400).json({ message: 'companyId and createdBy are required' });
+        };
+
+        // Ensure all required fields are provided
+        if (!customerName || !customerType || !companyName || !customerEmail || !customerPhone || !paymentTerms || !country || !address || !city || !state || !pinCode) {
+            return res.status(400).json({ message: 'All required fields must be provided' });
         }
+
+        const companyDetails = await CompanyDetails.findById(companyId).lean();
+        if (!companyDetails) {
+            return res.status(404).json({ message: 'Company details not found when creating a customer' });
+        };
+
+        const customerCount = await CustomerModel.countDocuments({ companyId });
+        if (customerCount >= companyDetails.customerLimit) {
+            return res.status(400).json({ message: "You have reached the maximum number of customer limit" });
+        }
+
         const newCustomer = new CustomerModel({
             createdBy,
             customerName,
@@ -27,6 +45,7 @@ const customerCreate = async (req, res) => {
             contactPersons,
             companyId,
         });
+
         const savedCustomer = await newCustomer.save();
         res.status(201).json(savedCustomer);
     } catch (error) {

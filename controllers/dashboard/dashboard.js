@@ -2,6 +2,7 @@ import { CollectionNames, ROLE, tokenReqValueEnums } from "../../services/enums.
 import { CompanyDetails } from '../../models/company/company.js'
 import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
 import mongoose from "mongoose";
+import { UserLogin } from "../../models/user.js";
 
 const filterAdminDashboard = async (startDate, endDate, InvoiceModel) => {
     const parseDate = (dateStr) => {
@@ -114,7 +115,8 @@ const filterAdminDashboard = async (startDate, endDate, InvoiceModel) => {
             returned: statusMap.returned || { noOfInvoices: 0 },
             deleted: statusMap.deleted || { noOfInvoices: 0 },
             draft: statusMap.draft || { noOfInvoices: 0 },
-            paid: statusMap.paid || { noOfInvoices: 0 }
+            paid: statusMap.paid || { noOfInvoices: 0 },
+            mailed: statusMap.mailed || { noOfInvoices: 0 }
         }
     };
 
@@ -228,7 +230,6 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
     // Get list of companies excluding the superadmin
     const companiesList = await CompanyDetails.find({ companyName: { $ne: excludedCompanyName } }).lean();
 
-
     // Initialize an array to store company overviews
     const companyOverview = [];
 
@@ -239,6 +240,7 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
         // Construct collection names based on company id
         const invoiceCollectionName = `${company._id.toString().replace(/\s+/g, '').toLowerCase()}_invoices`;
         const customerCollectionName = `${company._id.toString().replace(/\s+/g, '').toLowerCase()}_customers`;
+
 
         // Count invoices for each company
         const invoiceCount = await mongoose.connection.collection(invoiceCollectionName).countDocuments({
@@ -253,19 +255,22 @@ const filterSuperAdminDashboard = async (startDate, endDate, InvoiceModel, Custo
         // Count customers for each company
         const customerCount = await mongoose.connection.collection(customerCollectionName).countDocuments();
 
+        const userCount = await UserLogin.countDocuments({ companyId: company._id.toString() })
         // Add to company overview
         companyOverview.push({
             companyName: company.companyName,
             id: company._id.toString(),
             noOfInvoice: invoiceCount,
-            noOfCustomers: customerCount
+            noOfCustomers: customerCount,
+            noOfUsers: userCount,
         });
-    }
+    };
 
     return {
         totalNoOfCompany,
         totalNoOfInvoices,
-        companyOverview
+
+        companyOverview,
     };
 };
 

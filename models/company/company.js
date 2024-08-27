@@ -40,7 +40,23 @@ const companyDetailsSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-
+    // 
+    customerLimit: {
+        type: Number,
+        required: true,
+    },
+    invoiceLimit: {
+        type: Number,
+        required: true,
+    },
+    userLimit: {
+        type: Number,
+        required: true,
+    },
+    serviceLimit: {
+        type: Number,
+        required: true,
+    },
 });
 
 const CompanyDetails = mongoose.model('CompanyDetails', companyDetailsSchema);

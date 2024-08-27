@@ -218,9 +218,6 @@ export const rolePermissions = {
 };
 
 
-
-
-
 export const CollectionNames = Object.freeze({
     CUSTOMERS: 'customers',
     PAYMENT_TERMS: 'payment_terms',
@@ -240,3 +237,14 @@ export const tokenReqValueEnums = Object.freeze({
     COMPANY_NAME: 'companyName',
     COMPANY_ID: 'companyId',
 });
+
+
+export const INVOICE_STAGES = {
+    STAGE_1_DRAFT: "DRAFT",
+    STAGE_2_PENDING: "PENDING",
+    STAGE_3_APPROVED: "APPROVED",
+    STAGE_4_MAILED: "MAILED",
+    STAGE_5_PAID: "PAID",
+    STAGE_6_RETURNED: "RETURNED",
+    STAGE_7_DELETED: "DELETED",
+}

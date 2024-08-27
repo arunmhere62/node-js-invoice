@@ -217,14 +217,15 @@ const registerApproverOrStandardUser = async (req, res, session, tokenRoles, com
         return res.status(500).json({ message: 'Internal server error.' });
     }
 };
+
+// admin and company registration 
 const registerAdmin = async (req, res, session, tokenRoles) => {
-    const {
-        userDetails, companyDetails
-    } = req.body;
+    const { userDetails, companyDetails } = req.body;
 
     const { userEmail, userName, password, userMobile, description, userRole, } = userDetails;
     const { companyName, companyEmail, companyPhone, companyCountry, companyState, companyAddress,
-        companyWebsite, companyTaxNumber, companyRegNumber, } = companyDetails;
+        companyWebsite, companyTaxNumber, companyRegNumber, customerLimit, invoiceLimit, userLimit,
+        serviceLimit, } = companyDetails;
 
     if (!tokenRoles.includes(ROLE.SUPERADMIN)) {
         await session.abortTransaction();
@@ -256,6 +257,11 @@ const registerAdmin = async (req, res, session, tokenRoles) => {
         companyWebsite,
         companyTaxNumber,
         companyRegNumber,
+        // 
+        customerLimit,
+        invoiceLimit,
+        userLimit,
+        serviceLimit,
     }, session);
 
     await createUser({
@@ -291,6 +297,8 @@ const registerSuperAdmin = async (req, res, session) => {
         companyWebsite,
         companyTaxNumber,
         companyRegNumber,
+        // 
+
     } = req.body;
 
     const companyId = await createCompanyDetails({
@@ -303,6 +311,8 @@ const registerSuperAdmin = async (req, res, session) => {
         companyWebsite,
         companyTaxNumber,
         companyRegNumber,
+        // 
+
     }, session);
 
     await createUser({
@@ -503,13 +513,14 @@ const getSingleUser = async (req, res) => {
 const deleteUser = async (req, res) => {
     const userRole = req.userRole; // Extract the user's role from the request
     const userId = req.params.id; // Extract the user ID from the request parameters
+
     try {
         if (userRole === ROLE.SUPERADMIN) {
             // Delete the SUPERADMIN user and their associated company details
             const user = await UserLogin.findById(userId);
             if (!user) {
                 return res.status(404).json({ message: 'User not found' });
-            }
+            };
 
             const companyId = user.companyId;
             await UserLogin.deleteOne({ _id: userId });
@@ -525,9 +536,10 @@ const deleteUser = async (req, res) => {
             ];
 
             for (const collectionName of collections) {
-                await mongoose.connection.db(collectionName).deleteMany({});
+                await mongoose.connection.collection(collectionName).deleteMany({});
             };
-            res.status(200).json({ message: 'SUPERADMIN ,company details and all related data deleted successfully' });
+
+            res.status(200).json({ message: 'SUPERADMIN, company details, and all related data deleted successfully' });
         } else if (userRole === ROLE.ADMIN) {
             // Delete the ADMIN user details
             const user = await UserLogin.findById(userId);
@@ -546,6 +558,7 @@ const deleteUser = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 };
+
 
 export { userLogin, userRegistration, updateUserData, getAllUsers, getSingleUser, deleteUser };
 

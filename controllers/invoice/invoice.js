@@ -4,13 +4,18 @@ import moment from "moment";
 import { getDynamicModelNameGenerator } from "../../services/utils/ModelNameGenerator.js";
 import { UserLogin } from "../../models/user.js";
 import nodemailer from 'nodemailer';
+import { INVOICE_STAGES } from "../../services/enums.js";
+import { CompanyDetails } from "../../models/company/company.js";
+
+
 const invoiceCreate = async (req, res) => {
     try {
 
         const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
         if (!InvoiceModel) {
             return res.status(400).json({ message: `Unknown collection type: ${CollectionNames.INVOICE}, issue on backend` });
-        }
+        };
+
         const {
             invoiceType,
             invoiceNumber,
@@ -36,6 +41,18 @@ const invoiceCreate = async (req, res) => {
         const companyId = req.companyId || null;
         const createdBy = req.userName || null;
 
+        const companyDetails = await CompanyDetails.findOne({ _id: companyId }).lean();
+
+        if (!companyDetails) {
+            return res.status(404).json({ message: "company id not found when creating invoice" })
+        }
+
+        const invoiceCount = await InvoiceModel.countDocuments({ companyId });
+
+        if (invoiceCount >= companyDetails.invoiceLimit) {
+            return res.status(400).json({ message: "you have reached the max number of invoices" })
+        };
+
         // find approver is present or not
         const findApproverPresent = await UserLogin.find({
             companyId: companyId,
@@ -52,12 +69,13 @@ const invoiceCreate = async (req, res) => {
 
         // Initialize invoice stages
         let invoiceStages = {
-            stage1: null,
-            stage2: null,
-            stage3: null,
-            stage4: null,
-            stage5: null,
-            stage6: null
+            stage1: null, // draft
+            stage2: null, // pending
+            stage3: null, // approved
+            stage4: null, // paid
+            stage5: null, // returned
+            stage6: null, // mailed
+            stage7: null, // deleted
         };
 
         // Set initial stages based on invoice status
@@ -388,115 +406,89 @@ const invoiceGetById = async (req, res) => {
     }
 };
 
-const validateStageTransition = (currentStages, newStatus) => {
+export const validateStageTransition = (currentStages, newStatus) => {
     switch (newStatus) {
-        case 'PENDING':
-            return currentStages.stage1 === 'DRAFT';
-        case 'APPROVED':
-            return currentStages.stage1 === 'DRAFT' && currentStages.stage2 === 'PENDING';
-        case 'PAID':
-            return currentStages.stage1 === 'DRAFT' && currentStages.stage2 === 'PENDING' && currentStages.stage3 === 'APPROVED';
-        case 'RETURNED':
-            return currentStages.stage2 === 'PENDING' || currentStages.stage3 === 'APPROVED';
-        case 'DELETED':
+        case INVOICE_STAGES.STAGE_2_PENDING:
+            return currentStages.stage1 === INVOICE_STAGES.STAGE_1_DRAFT;
+        case INVOICE_STAGES.STAGE_3_APPROVED:
+            return currentStages.stage1 === INVOICE_STAGES.STAGE_1_DRAFT && currentStages.stage2 === INVOICE_STAGES.STAGE_2_PENDING;
+        case INVOICE_STAGES.STAGE_4_MAILED:
+            return currentStages.stage1 === INVOICE_STAGES.STAGE_1_DRAFT && currentStages.stage2 === INVOICE_STAGES.STAGE_2_PENDING && currentStages.stage3 === INVOICE_STAGES.STAGE_3_APPROVED
+        case INVOICE_STAGES.STAGE_5_PAID:
+            return currentStages.stage1 === INVOICE_STAGES.STAGE_1_DRAFT && currentStages.stage2 === INVOICE_STAGES.STAGE_2_PENDING && currentStages.stage3 === INVOICE_STAGES.STAGE_3_APPROVED && currentStages.stage4 === INVOICE_STAGES.STAGE_4_MAILED;
+        case INVOICE_STAGES.STAGE_6_RETURNED:
+            return currentStages.stage2 === INVOICE_STAGES.STAGE_2_PENDING || currentStages.stage3 === INVOICE_STAGES.STAGE_3_APPROVED;
+        case INVOICE_STAGES.STAGE_7_DELETED:
             return true;
         default:
             return true; // Allow other transitions without additional checks
     }
 };
 
-const sendInvoiceEmail = async (invoiceData, recipientEmail) => {
-    try {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: 'arunmhere98@gmail.com', // replace with your email
-                pass: 'cffp atvm dqvf lbus' // replace with your app password
-            },
-            logger: true, // Enable logging to debug issues
-            debug: true   // Enable debug output
-        });
-
-        const mailOptions = {
-            from: 'arunmhere98@gmail.com',
-            to: 'arunmhere62@gmail.com',
-            subject: `Invoice #${invoiceData.invoiceNumber} - Status: MAILED`,
-            text: `Dear ${invoiceData.customerName},\n\nYour invoice has been mailed.\n\nDetails:\nInvoice Number: ${invoiceData.invoiceNumber}\nTotal Amount: ${invoiceData.totalAmount}\n\nBest regards,\nYour Company`
-        };
-
-        await transporter.sendMail(mailOptions);
-        console.log("Invoice email sent successfully");
-        return { message: "Invoice updated & Mailed successfully" };
-
-    } catch (error) {
-        console.error("Error sending invoice email:", error);
-        return { message: "Invoice updated, but failed to send email", error: error.message };
-    }
-};
-
-const updateInvoiceStages = (invoiceStatus, invoiceStages) => {
+// using this in email function and invoice 
+export const updateInvoiceStages = (invoiceStatus, invoiceStages) => {
     const updatedStages = { ...invoiceStages };
 
     switch (invoiceStatus) {
-        case 'DRAFT':
-            updatedStages.stage1 = 'DRAFT';
+        case INVOICE_STAGES.STAGE_1_DRAFT:
+            updatedStages.stage1 = INVOICE_STAGES.STAGE_1_DRAFT;
             updatedStages.stage2 = null;
             updatedStages.stage3 = null;
             updatedStages.stage4 = null;
             updatedStages.stage5 = null;
             updatedStages.stage6 = null;
             break;
-        case 'PENDING':
-            updatedStages.stage1 = 'DRAFT';
-            updatedStages.stage2 = 'PENDING';
+        case INVOICE_STAGES.STAGE_2_PENDING:
+            updatedStages.stage1 = INVOICE_STAGES.STAGE_1_DRAFT;
+            updatedStages.stage2 = INVOICE_STAGES.STAGE_2_PENDING;
             updatedStages.stage3 = null;
             updatedStages.stage4 = null;
             updatedStages.stage5 = null;
             updatedStages.stage6 = null;
             break;
-        case 'APPROVED':
-            updatedStages.stage1 = 'DRAFT';
-            updatedStages.stage2 = 'PENDING';
-            updatedStages.stage3 = 'APPROVED';
+        case INVOICE_STAGES.STAGE_3_APPROVED:
+            updatedStages.stage1 = INVOICE_STAGES.STAGE_1_DRAFT;
+            updatedStages.stage2 = INVOICE_STAGES.STAGE_2_PENDING;
+            updatedStages.stage3 = INVOICE_STAGES.STAGE_3_APPROVED;
             updatedStages.stage4 = null;
             updatedStages.stage5 = null;
             updatedStages.stage6 = null;
             break;
-        case 'PAID':
-            updatedStages.stage1 = 'DRAFT';
-            updatedStages.stage2 = 'PENDING';
-            updatedStages.stage3 = 'APPROVED';
-            updatedStages.stage4 = 'PAID';
+        case INVOICE_STAGES.STAGE_4_MAILED:
+            updatedStages.stage1 = INVOICE_STAGES.STAGE_1_DRAFT;
+            updatedStages.stage2 = INVOICE_STAGES.STAGE_2_PENDING;
+            updatedStages.stage3 = INVOICE_STAGES.STAGE_3_APPROVED;
+            updatedStages.stage4 = INVOICE_STAGES.STAGE_4_MAILED;
             updatedStages.stage5 = null;
             updatedStages.stage6 = null;
             break;
-        case 'RETURNED':
-            updatedStages.stage1 = 'DRAFT';
+        case INVOICE_STAGES.STAGE_5_PAID:
+            updatedStages.stage1 = INVOICE_STAGES.STAGE_1_DRAFT;
+            updatedStages.stage2 = INVOICE_STAGES.STAGE_2_PENDING;
+            updatedStages.stage3 = INVOICE_STAGES.STAGE_3_APPROVED;
+            updatedStages.stage4 = INVOICE_STAGES.STAGE_4_MAILED;
+            updatedStages.stage5 = INVOICE_STAGES.STAGE_5_PAID;
+            updatedStages.stage6 = null;
+            break;
+        case INVOICE_STAGES.STAGE_6_RETURNED:
+            updatedStages.stage1 = INVOICE_STAGES.STAGE_1_DRAFT;
             updatedStages.stage2 = null;
             updatedStages.stage3 = null;
             updatedStages.stage4 = null;
             updatedStages.stage5 = null;
-            updatedStages.stage6 = 'RETURNED';
+            updatedStages.stage6 = INVOICE_STAGES.STAGE_6_RETURNED;
             break;
-        case 'MAILED':
-            updatedStages.stage1 = 'DRAFT';
-            updatedStages.stage2 = 'PENDING';
-            updatedStages.stage3 = 'APPROVED';
-            updatedStages.stage4 = null;
-            updatedStages.stage5 = 'MAILED';
-            updatedStages.stage6 = null;
+        case INVOICE_STAGES.STAGE_7_DELETED:
+            updatedStages.stage6 = INVOICE_STAGES.STAGE_7_DELETED;
             break;
         default:
             throw new Error('Invalid invoice status');
     }
-
     return updatedStages;
 };
 
 const invoiceUpdate = async (req, res) => {
     try {
-
-
         const { id } = req.params;
         const InvoiceModel = getDynamicModelNameGenerator(req, CollectionNames.INVOICE);
 
@@ -577,10 +569,6 @@ const invoiceUpdate = async (req, res) => {
             responseMessage = 'Invoice updated & Returned successfully';
         } else if (invoiceStatus === 'DRAFT') {
             responseMessage = 'Invoice Updated successfully and in Draft stage';
-        } else if (invoiceStatus === 'MAILED') {
-            responseMessage = 'Invoice updated & Mailed successfully';
-            // Send email notification
-            await sendInvoiceEmail(updatedInvoice, mailTo);
         }
         res.status(200).json({ message: responseMessage });
     } catch (error) {
